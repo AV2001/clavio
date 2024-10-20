@@ -18,6 +18,7 @@ storage_context = None
 query_engine = None
 
 
+# training the chatbot
 def train_chatbot(name, file_path):
     global storage_context, query_engine
     if storage_context is None:
