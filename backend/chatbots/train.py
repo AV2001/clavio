@@ -12,13 +12,14 @@ from llama_index.llms.openai import OpenAI
 from llama_index.embeddings.openai import OpenAIEmbedding
 from backend.settings.base import ZILLIZ_URI, ZILLIZ_TOKEN
 
+
 # Load environment variables
 load_dotenv()
 
 logger = logging.getLogger(__name__)
 
 
-def train_chatbot(file_paths):
+def train_chatbot(file_contents):
     Settings.llm = OpenAI(model="gpt-4o-mini")
     Settings.embed_model = OpenAIEmbedding(model="text-embedding-3-large")
 
@@ -33,7 +34,15 @@ def train_chatbot(file_paths):
         storage_context = StorageContext.from_defaults(vector_store=vector_store)
 
         logger.info("Parsing documents")
-        documents = LlamaParse(result_type="markdown").load_data(file_paths)
+        documents = []
+        for file_name, file_content in file_contents:
+            # Pass the file content as bytes along with the file name
+            documents.extend(
+                LlamaParse(result_type="markdown").load_data(
+                    file_content.getvalue(), extra_info={"file_name": file_name}
+                )
+            )
+
         logger.info("Creating index from documents")
         VectorStoreIndex.from_documents(documents, storage_context=storage_context)
 
