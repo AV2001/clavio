@@ -10,6 +10,7 @@ from llama_index.vector_stores.milvus import MilvusVectorStore
 from dotenv import load_dotenv
 from llama_index.llms.openai import OpenAI
 from llama_index.embeddings.openai import OpenAIEmbedding
+from backend.settings.base import ZILLIZ_URI, ZILLIZ_TOKEN
 
 # Load environment variables
 load_dotenv()
@@ -17,15 +18,14 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 
-def train_chatbot(file_path):
-    logger.info(f"Starting chatbot training with file: {file_path}")
+def train_chatbot(file_paths):
     Settings.llm = OpenAI(model="gpt-4o-mini")
     Settings.embed_model = OpenAIEmbedding(model="text-embedding-3-large")
 
     try:
         vector_store = MilvusVectorStore(
-            uri="https://in03-6542ce29e53d1b6.serverless.gcp-us-west1.cloud.zilliz.com",
-            token="184b9633d9a8b52ce99bc0cc7615742bd98190124cf906c085f86f0f84e119d3aa572e30c7ba0bf65c3f4ddbd9179ae0a0d1d07e",
+            uri=ZILLIZ_URI,
+            token=ZILLIZ_TOKEN,
             collection_name="insurance",
             dim=3072,
             overwrite=True,
@@ -33,7 +33,7 @@ def train_chatbot(file_path):
         storage_context = StorageContext.from_defaults(vector_store=vector_store)
 
         logger.info("Parsing documents")
-        documents = LlamaParse(result_type="markdown").load_data(file_path)
+        documents = LlamaParse(result_type="markdown").load_data(file_paths)
         logger.info("Creating index from documents")
         VectorStoreIndex.from_documents(documents, storage_context=storage_context)
 
@@ -52,8 +52,8 @@ def get_chatbot_response(question):
     Settings.embed_model = OpenAIEmbedding(model="text-embedding-3-large")
     try:
         vector_store = MilvusVectorStore(
-            uri="https://in03-6542ce29e53d1b6.serverless.gcp-us-west1.cloud.zilliz.com",
-            token="184b9633d9a8b52ce99bc0cc7615742bd98190124cf906c085f86f0f84e119d3aa572e30c7ba0bf65c3f4ddbd9179ae0a0d1d07e",
+            uri=ZILLIZ_URI,
+            token=ZILLIZ_TOKEN,
             collection_name="insurance",
             dim=3072,
         )
