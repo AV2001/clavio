@@ -10,8 +10,6 @@ class ChatbotView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        print(request.data)
-        name = request.data.get("name")
         files = request.FILES.getlist("files")
 
         # Get the file paths for the uploaded files
