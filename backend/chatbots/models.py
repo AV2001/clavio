@@ -12,6 +12,12 @@ class Chatbot(models.Model):
     organization = models.ForeignKey(
         Organization, on_delete=models.CASCADE, related_name="chatbots"
     )
+    embed_id = models.UUIDField(unique=True, null=True, editable=False)
 
     class Meta:
         db_table = "chatbots"
+
+    def save(self, *args, **kwargs):
+        if not self.embed_id:
+            self.embed_id = uuid.uuid4()
+        super().save(*args, **kwargs)
