@@ -3,7 +3,7 @@ from io import BytesIO
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
-from .train import train_chatbot, get_chatbot_response
+from .train import train_chatbot
 from .models import Chatbot
 
 logger = logging.getLogger(__name__)
@@ -47,20 +47,4 @@ class ChatbotView(APIView):
             return Response(
                 {"error": "There was an error creating the chatbot. Please try again."},
                 status=500,
-            )
-
-
-class ChatbotQueryView(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        try:
-            question = request.data.get("question")
-            response = get_chatbot_response(question)
-            return Response({"response": response})
-        except Exception as e:
-            logger.error(f"Error processing chatbot query: {str(e)}")
-            return Response(
-                {"error": "There was an error processing your question. Please try again."},
-                status=500
             )
