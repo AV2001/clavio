@@ -21,3 +21,15 @@ class Chatbot(models.Model):
         if not self.embed_id:
             self.embed_id = uuid.uuid4()
         super().save(*args, **kwargs)
+
+
+class ChatbotUser(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    full_name = models.CharField(max_length=255)
+    email = models.EmailField()
+    chatbot = models.ForeignKey(Chatbot, on_delete=models.CASCADE, related_name="users")
+    history = models.JSONField(default=list, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "chatbot_users"
