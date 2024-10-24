@@ -1,6 +1,7 @@
 import json
 import logging
 import tiktoken
+import urllib.parse
 from backend.settings.base import ZILLIZ_URI, ZILLIZ_TOKEN
 from channels.generic.websocket import AsyncWebsocketConsumer
 from llama_index.core import (
@@ -15,12 +16,25 @@ from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.llms.openai import OpenAI
 from llama_index.vector_stores.milvus import MilvusVectorStore
 
+# from .models import Chatbot  # Add this import
+from django.apps import apps
+from channels.db import database_sync_to_async
+
+
 logger = logging.getLogger(__name__)
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
+        self.embed_id = self.scope["url_route"]["kwargs"]["embed_id"]
         await self.accept()
+
+        # Extract user information from connection parameters
+        query_string = self.scope["query_string"].decode("utf-8")
+        query_params = dict(qp.split("=") for qp in query_string.split("&"))
+
+        full_name = urllib.parse.unquote(query_params.get("fullName", ""))
+        email = urllib.parse.unquote(query_params.get("email", ""))
 
         # Initialize the chatbot with memory for the user to start the conversation
         self.model = "gpt-4o-mini"
@@ -30,6 +44,38 @@ class ChatConsumer(AsyncWebsocketConsumer):
             llm=llm, token_limit=256, tokenizer_fn=self.tokenizer.encode
         )
         self.total_tokens = 0
+
+        # Fetch the chatbot details from the database
+        self.chatbot = await self.get_chatbot()
+
+        # Create ChatbotUser instance
+        await self.create_chatbot_user(full_name, email, self.chatbot)
+
+        self.memory.put(
+            ChatMessage(role="assistant", content=self.chatbot.initial_message)
+        )
+        # Send the initial message
+        await self.send(
+            text_data=json.dumps(
+                {
+                    "response": self.chatbot.initial_message,
+                    "history": [self.chatbot.initial_message],
+                    "total_tokens": self.total_tokens,
+                }
+            )
+        )
+
+    @database_sync_to_async
+    def get_chatbot(self):
+        Chatbot = apps.get_model("chatbots", "Chatbot")
+        return Chatbot.objects.get(embed_id=self.embed_id)
+
+    @database_sync_to_async
+    def create_chatbot_user(self, full_name, email, chatbot):
+        ChatbotUser = apps.get_model("chatbots", "ChatbotUser")
+        return ChatbotUser.objects.create(
+            full_name=full_name, email=email, chatbot=chatbot
+        )
 
     async def disconnect(self, close_code):
         logger.info(f"Total tokens used in this session: {self.total_tokens}")
