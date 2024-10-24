@@ -49,7 +49,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         self.chatbot = await self.get_chatbot()
 
         # Create ChatbotUser instance
-        await self.create_chatbot_user(full_name, email, self.chatbot)
+        self.chatbot_user = await self.create_chatbot_user(
+            full_name, email, self.chatbot
+        )
 
         self.memory.put(
             ChatMessage(role="assistant", content=self.chatbot.initial_message)
@@ -79,6 +81,26 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def disconnect(self, close_code):
         logger.info(f"Total tokens used in this session: {self.total_tokens}")
+
+        # Get the chat history
+        chat_history = self.memory.get()
+        history_str = "\n".join(
+            [
+                f"{msg.role.replace("MessageRole.","")}: {msg.content}"
+                for msg in chat_history
+            ]
+        )
+
+        # Update the ChatbotUser with the chat history
+        await self.update_chatbot_user_history(history_str)
+
+    @database_sync_to_async
+    def update_chatbot_user_history(self, history):
+        ChatbotUser = apps.get_model("chatbots", "ChatbotUser")
+        chatbot_user = ChatbotUser.objects.get(id=self.chatbot_user.id)
+        if chatbot_user:
+            chatbot_user.history = history
+            chatbot_user.save()
 
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
