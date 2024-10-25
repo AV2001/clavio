@@ -31,10 +31,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         # Extract user information from connection parameters
         query_string = self.scope["query_string"].decode("utf-8")
-        query_params = dict(qp.split("=") for qp in query_string.split("&"))
 
-        full_name = urllib.parse.unquote(query_params.get("fullName", ""))
-        email = urllib.parse.unquote(query_params.get("email", ""))
+        # Only try to parse query params if they exist
+        if query_string:
+            try:
+                query_params = dict(
+                    qp.split("=") for qp in query_string.split("&") if "=" in qp
+                )
+                full_name = urllib.parse.unquote(
+                    query_params.get("fullName", "")
+                ).replace("+", " ")
+                email = urllib.parse.unquote(query_params.get("email", ""))
+            except Exception as e:
+                logger.error(f"Error parsing query parameters: {str(e)}")
 
         # Initialize the chatbot with memory for the user to start the conversation
         self.model = "gpt-4o-mini"
@@ -48,6 +57,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         # Fetch the chatbot details from the database
         self.chatbot = await self.get_chatbot()
 
+        # Fetch the organization name
+        self.organization_name = await self.get_organization_name()
+
         # Create ChatbotUser instance
         self.chatbot_user = await self.create_chatbot_user(
             full_name, email, self.chatbot
@@ -56,6 +68,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         self.memory.put(
             ChatMessage(role="assistant", content=self.chatbot.initial_message)
         )
+
+        self.first_name = full_name.split(" ")[0]
+
         # Send the initial message
         await self.send(
             text_data=json.dumps(
@@ -71,6 +86,10 @@ class ChatConsumer(AsyncWebsocketConsumer):
     def get_chatbot(self):
         Chatbot = apps.get_model("chatbots", "Chatbot")
         return Chatbot.objects.get(embed_id=self.embed_id)
+
+    @database_sync_to_async
+    def get_organization_name(self):
+        return self.chatbot.organization.name
 
     @database_sync_to_async
     def create_chatbot_user(self, full_name, email, chatbot):
@@ -104,9 +123,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
-        query = text_data_json["query"]
+        query = text_data_json.get("query")
 
-        # Add user query to memory and count tokens
+        if not query:
+            return
+
+        # Add user message to memory and count tokens
         self.memory.put(ChatMessage(role="user", content=query))
         self.total_tokens += len(self.tokenizer.encode(query))
 
@@ -132,8 +154,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
 
     async def get_chatbot_response(self, query):
-        logger.info(f"Processing question: {query}")
-
         Settings.llm = OpenAI(model=self.model)
         Settings.embed_model = OpenAIEmbedding(model="text-embedding-3-large")
         try:
@@ -157,10 +177,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
             # Define a custom prompt template
             custom_prompt_template = PromptTemplate(
-                "You are a friendly human, here to help with questions the user asks just like a human would based on the context provided."
-                "Be friendly and conversational, not robotic. Use their name occasionally to make the conversation more natural."
-                "The answer should be concise and accurate based on the context provided."
-                "If the question is not related to the uploaded documents or the specific domain you're trained on, politely redirect the user to ask about relevant topics. Last but not least, do not mention anything about documents in the answer. Based on what the user asks and the answer you provide, try to come up with a follow up question that the user might ask next.\n\n"
+                "You are {name}, a dedicated AI assistant at {organization_name} focused on providing accurate, helpful responses within the scope of the provided context. "
+                "Your role is to answer questions related to this specific context, and you are unable to provide information beyond it. However, you may answer "
+                "basic questions about yourself, such as your purpose or capabilities, while maintaining a friendly, respectful tone. Address {first_name} by name occasionally, "
+                "in a natural and non-repetitive way, to build a polite and friendly connection. Your responses should always be:"
+                "\n1. Accurate and based only on the provided context"
+                "\n2. Clear, concise, and to the point"
+                "\n3. Friendly, respectful, and professional"
+                "\nIf asked about topics outside the context, kindly clarify that you’re limited to answering within your focus area and can only offer information "
+                "related to this specific context.\n\n"
                 "Chat History:\n{chat_history}\n\n"
                 "Context: {context_str}\n"
                 "Question: {query_str}\n"
@@ -169,14 +194,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
             query_engine = index.as_query_engine(
                 text_qa_template=custom_prompt_template.partial_format(
-                    chat_history=chat_history_str
-                )
+                    name=self.chatbot.name,
+                    chat_history=chat_history_str,
+                    first_name=self.first_name,
+                    organization_name=self.organization_name,
+                ),
             )
-            logger.info("Querying the index")
             response = await query_engine.aquery(query)
-            logger.info("Response generated successfully")
-
             return response.response
         except Exception as e:
             logger.error(f"An error occurred while processing the question: {str(e)}")
-            return f"An error occurred while processing your question: {str(e)}"
+            return "I'm sorry, I'm having trouble processing your question. Please try again later."
