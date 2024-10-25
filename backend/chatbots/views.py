@@ -6,6 +6,9 @@ from rest_framework.permissions import AllowAny
 from .train import train_chatbot
 from organizations.models import Organization
 from .models import Chatbot
+from django.shortcuts import get_object_or_404
+from django.template.loader import render_to_string
+from django.http import HttpResponse
 
 
 logger = logging.getLogger(__name__)
@@ -67,5 +70,45 @@ class ChatbotView(APIView):
                 {
                     "error": "There was an error creating the chatbot. Please try again later."
                 },
+                status=500,
+            )
+
+
+class ChatbotEmbedScriptView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, embed_id):
+        try:
+            chatbot = get_object_or_404(Chatbot, embed_id=embed_id)
+
+            # Get the base URL and WebSocket URL
+            base_url = request.build_absolute_uri("/").rstrip("/")
+            ws_protocol = "wss" if request.is_secure() else "ws"
+            ws_url = f"{ws_protocol}://{request.get_host()}/ws/chat/{chatbot.embed_id}/"
+
+            # Render the JavaScript template
+            script = render_to_string(
+                "chatbots/embed.js",
+                {
+                    "chatbot": chatbot,
+                    "base_url": base_url,
+                    "ws_url": ws_url,
+                },
+            )
+
+            # Return as a proper JavaScript response
+            return HttpResponse(
+                script,
+                content_type="application/javascript; charset=utf-8",
+                headers={
+                    "Access-Control-Allow-Origin": "*",
+                    "Cache-Control": "no-cache, no-store, must-revalidate",
+                },
+            )
+        except Exception as e:
+            logger.error(f"Failed to load chatbot script: {str(e)}")
+            return HttpResponse(
+                f"console.error('Failed to load chatbot script: {str(e)}');",
+                content_type="application/javascript",
                 status=500,
             )
