@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt.token_blacklist",
     "organizations",
     "chatbots",
+    "users",
 ]
 
 MIDDLEWARE = [
