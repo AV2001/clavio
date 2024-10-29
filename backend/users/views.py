@@ -65,4 +65,7 @@ class UserDetailView(APIView):
             )
         except Exception as e:
             logger.error(f"Error getting user: {str(e)}")
-            return Response({"error": "User could not be retrieved. Please try again."}, status=500)
+
+            return Response(
+                {"error": "User could not be retrieved. Please try again."}, status=500
+            )
