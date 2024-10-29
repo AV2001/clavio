@@ -2,35 +2,7 @@ import uuid
 from django.db import models
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.base_user import BaseUserManager
-
-
-class User(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    full_name = models.CharField(max_length=255)
-    email = models.EmailField(unique=True)
-    password = models.CharField(max_length=255, null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    organization = models.ForeignKey(
-        "organizations.Organization",
-        on_delete=models.CASCADE,
-        related_name="users",
-        null=True,
-        blank=True,
-    )
-
-    def save(self, *args, **kwargs):
-        if self._state.adding or self._password_has_changed():
-            self.password = make_password(self.password)
-        super().save(*args, **kwargs)
-
-    def _password_has_changed(self):
-        if not self.pk:
-            return False
-        if self.password is None:
-            return False
-        old_password = User.objects.get(pk=self.pk).password
-
-        return self.password != old_password
+from organizations.models import Organization
 
 
 class UserManager(BaseUserManager):
@@ -58,8 +30,35 @@ class UserManager(BaseUserManager):
         return self.create_user(email, full_name, password, **extra_fields)
 
 
-objects = UserManager()
+class User(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    full_name = models.CharField(max_length=255)
+    email = models.EmailField(unique=True)
+    password = models.CharField(max_length=255, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="users",
+        null=True,
+        blank=True,
+    )
 
+    objects = UserManager()
 
-class Meta:
-    db_table = "users"
+    class Meta:
+        db_table = "users"
+
+    def save(self, *args, **kwargs):
+        if self._state.adding or self._password_has_changed():
+            self.password = make_password(self.password)
+        super().save(*args, **kwargs)
+
+    def _password_has_changed(self):
+        if not self.pk:
+            return False
+        if self.password is None:
+            return False
+        old_password = User.objects.get(pk=self.pk).password
+
+        return self.password != old_password
