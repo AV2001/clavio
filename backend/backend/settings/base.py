@@ -25,6 +25,7 @@ ZILLIZ_TOKEN = os.getenv("ZILLIZ_TOKEN")
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("SECRET_KEY")
 
+AUTH_USER_MODEL = "users.User"
 
 # Application definition
 INSTALLED_APPS = [
