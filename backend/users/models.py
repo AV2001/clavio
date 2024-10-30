@@ -1,7 +1,7 @@
 import uuid
 from django.db import models
 from django.contrib.auth.hashers import make_password
-from django.contrib.auth.base_user import BaseUserManager
+from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from organizations.models import Organization
 
 
@@ -30,8 +30,7 @@ class UserManager(BaseUserManager):
         return self.create_user(email, full_name, password, **extra_fields)
 
 
-class User(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+class User(AbstractBaseUser):
     full_name = models.CharField(max_length=255)
     email = models.EmailField(unique=True)
     password = models.CharField(max_length=255, null=True, blank=True)
@@ -43,6 +42,9 @@ class User(models.Model):
         null=True,
         blank=True,
     )
+
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["full_name"]
 
     objects = UserManager()
 
