@@ -205,3 +205,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
         except Exception as e:
             logger.error(f"An error occurred while processing the question: {str(e)}")
             return "I'm sorry, I'm having trouble processing your question. Please try again later."
+
+
+class ChatbotStatusConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        self.chatbot_id = self.scope["url_route"]["kwargs"]["chatbot_id"]
+        self.room_group_name = f"chatbot_{self.chatbot_id}"
+
+        await self.channel_layer.group_add(self.room_group_name, self.channel_name)
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
+
+    async def chatbot_status(self, event):
+        message = event["message"]
+        await self.send(text_data=json.dumps(message))
