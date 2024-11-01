@@ -135,3 +135,21 @@ class ChatbotEmbedScriptView(APIView):
                 content_type="application/javascript",
                 status=500,
             )
+
+
+class ChatbotDetailView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, chatbot_id):
+        try:
+            chatbot = get_object_or_404(Chatbot, id=chatbot_id)
+            serializer = ChatbotSerializer(chatbot)
+            embed_code = f"<script src='{request.build_absolute_uri('/api/chatbots/embed/')}{chatbot.embed_id}.js'></script>"
+            data = serializer.data
+            data["embedCode"] = embed_code
+            return Response(data, status=200)
+        except Exception as e:
+            logger.error(f"Error fetching chatbot: {str(e)}")
+            return Response(
+                {"error": "There was an error fetching the chatbot."}, status=500
+            )
