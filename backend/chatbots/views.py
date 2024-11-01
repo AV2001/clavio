@@ -1,14 +1,15 @@
 import logging
-from io import BytesIO
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
-from .train import train_with_files, train_with_urls
-from organizations.models import Organization
-from .models import Chatbot
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
 from django.http import HttpResponse
+from organizations.models import Organization
+from .serializers import ChatbotSerializer
+from .models import Chatbot
+from .tasks import train_chatbot_task
 
 
 logger = logging.getLogger(__name__)
@@ -17,62 +18,82 @@ logger = logging.getLogger(__name__)
 class ChatbotView(APIView):
     permission_classes = [AllowAny]
 
-    def post(self, request):
-        org_name = "insurance"
+    def get(self, request):
         try:
-            chatbot_name = request.data.get("chatbotName")
-            initial_message = request.data.get("initialMessage")
-            # bot_image = request.data.get("botImage")
-            primary_color = request.data.get("primaryColor")
-            secondary_color = request.data.get("secondaryColor")
-            chatbot_border_radius = request.data.get("borderRadius")
-            font_size = request.data.get("fontSize")
-            widget_color = request.data.get("widgetColor")
-            widget_border_radius = request.data.get("widgetBorderRadius")
-            training_method = request.data.get("trainingMethod")
-
-            if training_method == "files":
-                files = request.FILES.getlist("files")
-                if not files:
-                    return Response({"error": "No files uploaded"}, status=400)
-                response = train_with_files(files, org_name)
-            elif training_method == "urls":
-                urls = request.data.getlist("urls")
-                print(urls)
-                if not urls:
-                    return Response({"error": "No URLs provided"}, status=400)
-                response = train_with_urls(urls, org_name)
-            chatbot = Chatbot.objects.create(
-                organization=Organization.objects.get(
-                    id="7c994c28-6d35-42df-a722-887a86659d8b"
-                ),
-                name=chatbot_name,
-                initial_message=initial_message,
-                primary_color=primary_color,
-                secondary_color=secondary_color,
-                chatbot_border_radius=chatbot_border_radius,
-                font_size=font_size,
-                widget_color=widget_color,
-                widget_border_radius=widget_border_radius,
+            chatbots = Chatbot.objects.filter(
+                organization="7c994c28-6d35-42df-a722-887a86659d8b"
             )
-            chatbot.save()
-
-            embed_url = f"{request.build_absolute_uri('/embed/')}{chatbot.embed_id}"
-
+            serializer = ChatbotSerializer(chatbots, many=True)
+            return Response(serializer.data, status=200)
+        except Exception as e:
+            logger.error(f"Error fetching chatbots: {str(e)}")
             return Response(
                 {
-                    "message": response["message"],
-                    "embed_url": embed_url,
+                    "error": "There was an error fetching the chatbots. Please try again later."
                 },
-                status=response["status"],
+                status=500,
             )
+
+    def post(self, request):
+        try:
+            with transaction.atomic():
+                # Log the incoming request data
+                logger.info(f"Received request data: {request.data}")
+
+                chatbot = Chatbot.objects.create(
+                    organization=Organization.objects.get(
+                        id="7c994c28-6d35-42df-a722-887a86659d8b"
+                    ),
+                    name=request.data.get("chatbotName"),
+                    initial_message=request.data.get("initialMessage"),
+                    primary_color=request.data.get("primaryColor"),
+                    secondary_color=request.data.get("secondaryColor"),
+                    chatbot_border_radius=request.data.get("borderRadius"),
+                    font_size=request.data.get("fontSize"),
+                    widget_color=request.data.get("widgetColor"),
+                    status="training",
+                )
+
+                # Log successful chatbot creation
+                logger.info(f"Created chatbot with ID: {chatbot.id}")
+
+                training_method = request.data.get("trainingMethod")
+                files = (
+                    request.FILES.getlist("files")
+                    if training_method == "files"
+                    else None
+                )
+                urls = (
+                    request.data.getlist("urls") if training_method == "urls" else None
+                )
+
+                try:
+                    # Log task creation attempt
+                    logger.info(
+                        f"Attempting to create Celery task for chatbot {chatbot.id}"
+                    )
+
+                    train_chatbot_task.delay(
+                        str(chatbot.id), training_method, files=files, urls=urls
+                    )
+
+                    logger.info("Celery task created successfully")
+                except Exception as task_error:
+                    logger.error(f"Failed to create Celery task: {str(task_error)}")
+                    raise
+
+                return Response(
+                    {
+                        "message": "Chatbot creation initiated. Training in progress.",
+                        "chatbotId": str(chatbot.id),
+                    },
+                    status=202,
+                )
+
         except Exception as e:
             logger.error(f"Error creating chatbot: {str(e)}")
             return Response(
-                {
-                    "error": "There was an error creating the chatbot. Please try again later."
-                },
-                status=500,
+                {"error": "There was an error creating the chatbot."}, status=500
             )
 
 
