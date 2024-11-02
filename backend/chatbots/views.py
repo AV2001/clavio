@@ -153,3 +153,14 @@ class ChatbotDetailView(APIView):
             return Response(
                 {"error": "There was an error fetching the chatbot."}, status=500
             )
+
+    def delete(self, request, chatbot_id):
+        try:
+            chatbot = get_object_or_404(Chatbot, id=chatbot_id)
+            chatbot.delete()
+            return Response(status=204)
+        except Exception as e:
+            logger.error(f"Error deleting chatbot: {str(e)}")
+            return Response(
+                {"error": "There was an error deleting the chatbot."}, status=500
+            )
