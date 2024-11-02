@@ -160,7 +160,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             vector_store = MilvusVectorStore(
                 uri=ZILLIZ_URI,
                 token=ZILLIZ_TOKEN,
-                collection_name="insurance",
+                collection_name=self.organization_name,
                 dim=3072,
             )
 
