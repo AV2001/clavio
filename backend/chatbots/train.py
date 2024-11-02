@@ -11,7 +11,7 @@ from llama_index.vector_stores.milvus import MilvusVectorStore
 from dotenv import load_dotenv
 from llama_index.llms.openai import OpenAI
 from llama_index.embeddings.openai import OpenAIEmbedding
-from backend.settings.base import ZILLIZ_URI, ZILLIZ_TOKEN
+from backend.settings.base import FIRECRAWL_API_KEY, ZILLIZ_URI, ZILLIZ_TOKEN
 from firecrawl.firecrawl import FirecrawlApp
 
 
@@ -22,17 +22,12 @@ logger = logging.getLogger(__name__)
 
 Settings.llm = OpenAI(model="gpt-4o-mini")
 Settings.embed_model = OpenAIEmbedding(model="text-embedding-3-large")
-# vector_store = MilvusVectorStore(
-#     uri=ZILLIZ_URI,
-#     token=ZILLIZ_TOKEN,
-#     collection_name="insurance",
-#     dim=3072,
-#     overwrite=True,
-# )
-# storage_context = StorageContext.from_defaults(vector_store=vector_store)
 
 
 def initalize_vector_store(org_name):
+    """
+    Initialize the vector store.
+    """
     vector_store = MilvusVectorStore(
         uri=ZILLIZ_URI,
         token=ZILLIZ_TOKEN,
@@ -44,6 +39,9 @@ def initalize_vector_store(org_name):
 
 
 def train_with_files(files, org_name):
+    """
+    Train the chatbot with a list of files.
+    """
     try:
         storage_context = initalize_vector_store(org_name)
         file_contents = []
@@ -70,18 +68,17 @@ def train_with_files(files, org_name):
 
 
 def train_with_urls(urls, org_name):
+    """
+    Train the chatbot with a list of URLs.
+    """
     try:
         storage_context = initalize_vector_store(org_name)
-        app = FirecrawlApp(api_key="fc-8091e4c7c31f4524be097dcc8e83142a")
+        app = FirecrawlApp(api_key=FIRECRAWL_API_KEY)
         documents = []
         for url in urls:
             result = app.scrape_url(url)
             content = result["markdown"]
-            print("-------------------------------------------")
-            doc = Document(
-                text=content,
-                metadata={"url": url}
-            )
+            doc = Document(text=content, metadata={"url": url})
             documents.append(doc)
 
         logger.info("Creating index from documents")
