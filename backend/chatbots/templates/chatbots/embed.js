@@ -6,7 +6,7 @@
       name: '{{ chatbot.name }}',
       primaryColor: '{{ chatbot.primary_color }}',
       secondaryColor: '{{ chatbot.secondary_color }}',
-      borderRadius: '{{ chatbot.chatbot_border_radius }}',
+      chatbotBorderRadius: '{{ chatbot.chatbot_border_radius }}',
       fontSize: '{{ chatbot.font_size }}',
       widgetColor: '{{ chatbot.widget_color|default:chatbot.primary_color }}',
       widgetBorderRadius:
@@ -79,7 +79,7 @@
                           <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
                       </svg>
                   </div>
-                  <div class="flex gap-2 p-3 max-w-[80%]" style="background-color: ${config.primaryColor}20; border-radius: ${config.borderRadius}px">
+                  <div class="flex gap-2 p-3 max-w-[80%]" style="background-color: ${config.primaryColor}20; border-radius: ${config.chatbotBorderRadius}px">
                       <div class="w-2 h-2 rounded-full animate-pulse" style="background-color: ${config.primaryColor}"></div>
                       <div class="w-2 h-2 rounded-full animate-pulse delay-100" style="background-color: ${config.primaryColor}"></div>
                       <div class="w-2 h-2 rounded-full animate-pulse delay-200" style="background-color: ${config.primaryColor}"></div>
@@ -91,7 +91,7 @@
           sender === 'user'
             ? `
               <div class="ml-auto flex items-start gap-2">
-                  <div class="p-3 max-w-[80%] text-white" style="background-color: ${config.primaryColor}; color: ${config.secondaryColor}; border-radius: ${config.borderRadius}px">
+                  <div class="p-3 max-w-[80%] text-white" style="background-color: ${config.primaryColor}; color: ${config.secondaryColor}; border-radius: ${config.chatbotBorderRadius}px">
                       <p>${message}</p>
                   </div>
                   <div class="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
@@ -108,7 +108,7 @@
                           <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
                       </svg>
                   </div>
-                  <div class="p-3 max-w-[80%]" style="background-color: ${config.primaryColor}20; border-radius: ${config.borderRadius}px">
+                  <div class="p-3 max-w-[80%]" style="background-color: ${config.primaryColor}20; border-radius: ${config.chatbotBorderRadius}px">
                       <p>${message}</p>
                   </div>
               </div>
@@ -152,15 +152,15 @@
       const chatHTML = `
           <div class="fixed bottom-8 right-8 flex flex-col items-center font-inter">
               <div class="w-[350px] h-[500px] rounded-lg flex flex-col bg-white shadow-lg"
-                  style="border-radius: ${config.borderRadius}px; font-size: ${
+                  style="border-radius: ${config.chatbotBorderRadius}px; font-size: ${
         config.fontSize
       }px">
                   <div class="p-4 flex items-center justify-between"
                       style="background-color: ${
                         config.primaryColor
                       }; border-top-left-radius: ${
-        config.borderRadius
-      }px; border-top-right-radius: ${config.borderRadius}px">
+        config.chatbotBorderRadius
+      }px; border-top-right-radius: ${config.chatbotBorderRadius}px">
                       <div class="flex items-center gap-3">
                           <div class="w-10 h-10 rounded-full flex items-center justify-center" style="background-color: ${
                             config.primaryColor
@@ -198,18 +198,18 @@
                               <input type="text" name="full_name" placeholder="Full Name *" required
                                   class="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-1"
                                   style="border-radius: ${
-                                    config.borderRadius
+                                    config.chatbotBorderRadius
                                   }px; --tw-ring-color: ${config.primaryColor}">
                               <input type="email" name="email" placeholder="Email Address *" required
                                   class="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-1"
                                   style="border-radius: ${
-                                    config.borderRadius
+                                    config.chatbotBorderRadius
                                   }px; --tw-ring-color: ${config.primaryColor}">
                               <button type="submit"
                                   class="w-full p-3 text-white font-medium hover:opacity-90 transition-colors"
                                   style="background-color: ${
                                     config.primaryColor
-                                  }; border-radius: ${config.borderRadius}px">
+                                  }; border-radius: ${config.chatbotBorderRadius}px">
                                   Start Chat
                               </button>
                           </div>
@@ -221,7 +221,7 @@
                           <input type="text" id="ai-chat-input-field" placeholder="Type a message..."
                               class="flex-1 p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-1"
                               style="border-radius: ${
-                                config.borderRadius
+                                config.chatbotBorderRadius
                               }px; --tw-ring-color: ${config.primaryColor}">
                           <button id="ai-chat-send"
                               class="w-10 h-10 flex items-center justify-center text-white hover:opacity-90 transition-colors"
@@ -229,7 +229,7 @@
                                 config.primaryColor
                               }; color: ${
         config.secondaryColor
-      }; border-radius: ${config.borderRadius}px">
+      }; border-radius: ${config.chatbotBorderRadius}px">
                               <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                   <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
                               </svg>
@@ -274,13 +274,13 @@
                   <div class="space-y-4">
                       <input type="text" name="full_name" placeholder="Full Name *" required
                           class="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2"
-                          style="border-radius: ${config.borderRadius}px; --tw-ring-color: ${config.primaryColor}">
+                          style="border-radius: ${config.chatbotBorderRadius}px; --tw-ring-color: ${config.primaryColor}">
                       <input type="email" name="email" placeholder="Email Address *" required
                           class="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2"
-                          style="border-radius: ${config.borderRadius}px; --tw-ring-color: ${config.primaryColor}">
+                          style="border-radius: ${config.chatbotBorderRadius}px; --tw-ring-color: ${config.primaryColor}">
                       <button type="submit"
                           class="w-full p-3 text-white font-medium hover:opacity-90 transition-colors"
-                          style="background-color: ${config.primaryColor}; border-radius: ${config.borderRadius}px">
+                          style="background-color: ${config.primaryColor}; border-radius: ${config.chatbotBorderRadius}px">
                           Start Chat
                       </button>
                   </div>
