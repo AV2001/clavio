@@ -48,9 +48,10 @@ class ChatbotView(APIView):
                     initial_message=request.data.get("initialMessage"),
                     primary_color=request.data.get("primaryColor"),
                     secondary_color=request.data.get("secondaryColor"),
-                    chatbot_border_radius=request.data.get("borderRadius"),
+                    chatbot_border_radius=request.data.get("chatbotBorderRadius"),
                     font_size=request.data.get("fontSize"),
                     widget_color=request.data.get("widgetColor"),
+                    widget_border_radius=request.data.get("widgetBorderRadius"),
                     status="training",
                 )
 
