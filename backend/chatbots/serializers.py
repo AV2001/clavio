@@ -2,7 +2,21 @@ from rest_framework import serializers
 from .models import Chatbot
 
 
-class ChatbotSerializer(serializers.ModelSerializer):
+class ChatbotListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Chatbot
+        fields = ["id", "name", "status", "created_at"]
+
+    def to_representation(self, instance):
+        return {
+            "id": str(instance.id),
+            "name": instance.name,
+            "status": instance.status,
+            "createdAt": instance.created_at,
+        }
+
+
+class ChatbotDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Chatbot
         fields = "__all__"
