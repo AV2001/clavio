@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
 from django.http import HttpResponse
 from organizations.models import Organization
-from .serializers import ChatbotSerializer
+from .serializers import ChatbotListSerializer, ChatbotDetailSerializer
 from .models import Chatbot
 from .tasks import train_chatbot_task
 
@@ -23,7 +23,7 @@ class ChatbotView(APIView):
             chatbots = Chatbot.objects.filter(
                 organization="7c994c28-6d35-42df-a722-887a86659d8b"
             )
-            serializer = ChatbotSerializer(chatbots, many=True)
+            serializer = ChatbotListSerializer(chatbots, many=True)
             return Response(serializer.data, status=200)
         except Exception as e:
             logger.error(f"Error fetching chatbots: {str(e)}")
@@ -144,7 +144,7 @@ class ChatbotDetailView(APIView):
     def get(self, request, chatbot_id):
         try:
             chatbot = get_object_or_404(Chatbot, id=chatbot_id)
-            serializer = ChatbotSerializer(chatbot)
+            serializer = ChatbotDetailSerializer(chatbot)
             embed_code = f"<script src='{request.build_absolute_uri('/api/chatbots/embed/')}{chatbot.embed_id}.js'></script>"
             data = serializer.data
             data["embedCode"] = embed_code
