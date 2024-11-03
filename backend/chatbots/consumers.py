@@ -3,6 +3,7 @@ import logging
 import tiktoken
 import urllib.parse
 from backend.settings.base import ZILLIZ_URI, ZILLIZ_TOKEN
+from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 from llama_index.core import (
     Settings,
@@ -10,19 +11,15 @@ from llama_index.core import (
     StorageContext,
     PromptTemplate,
 )
+from django.apps import apps
 from llama_index.core.llms import ChatMessage
 from llama_index.core.memory import ChatSummaryMemoryBuffer
 from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.llms.openai import OpenAI
 from llama_index.vector_stores.milvus import MilvusVectorStore
 
-# from .models import Chatbot  # Add this import
-from django.apps import apps
-from channels.db import database_sync_to_async
-
 
 logger = logging.getLogger(__name__)
-
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -70,6 +67,21 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
 
         self.first_name = full_name.split(" ")[0]
+
+        # Initialize vector store
+        self.vector_store = MilvusVectorStore(
+            uri=ZILLIZ_URI,
+            token=ZILLIZ_TOKEN,
+            collection_name=self.organization_name,
+            dim=3072,
+        )
+
+        self.storage_context = StorageContext.from_defaults(
+            vector_store=self.vector_store
+        )
+        self.index = VectorStoreIndex.from_vector_store(
+            self.vector_store, storage_context=self.storage_context
+        )
 
         # Send the initial message
         await self.send(
@@ -157,18 +169,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
         Settings.llm = OpenAI(model=self.model)
         Settings.embed_model = OpenAIEmbedding(model="text-embedding-3-large")
         try:
-            vector_store = MilvusVectorStore(
-                uri=ZILLIZ_URI,
-                token=ZILLIZ_TOKEN,
-                collection_name=self.organization_name,
-                dim=3072,
-            )
-
-            storage_context = StorageContext.from_defaults(vector_store=vector_store)
-            index = VectorStoreIndex.from_vector_store(
-                vector_store, storage_context=storage_context
-            )
-
             # Get chat history
             chat_history = self.memory.get()
             chat_history_str = "\n".join(
@@ -184,7 +184,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 "\n1. Accurate and based only on the provided context"
                 "\n2. Clear, concise, and to the point"
                 "\n3. Friendly, respectful, and professional"
-                "\nIf asked about topics outside the context, kindly clarify that you’re limited to answering within your focus area and can only offer information "
+                "\nIf asked about topics outside the context, kindly clarify that you're limited to answering within your focus area and can only offer information "
                 "related to this specific context.\n\n"
                 "Chat History:\n{chat_history}\n\n"
                 "Context: {context_str}\n"
@@ -192,7 +192,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 "Answer: "
             )
 
-            query_engine = index.as_query_engine(
+            query_engine = self.index.as_query_engine(
                 text_qa_template=custom_prompt_template.partial_format(
                     name=self.chatbot.name,
                     chat_history=chat_history_str,
