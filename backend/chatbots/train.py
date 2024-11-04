@@ -38,25 +38,36 @@ def initalize_vector_store(org_name):
     return StorageContext.from_defaults(vector_store=vector_store)
 
 
-def train_with_files(files, org_name):
+def train_with_files(files, org_name, progress_callback):
     """
     Train the chatbot with a list of files.
     """
     try:
         storage_context = initalize_vector_store(org_name)
         file_contents = []
+
+        if progress_callback:
+            progress_callback("Processing the files")
+
         for file in files:
             content = file.read()
             file_contents.append((file.name, BytesIO(content)))
 
         documents = []
+
+        if progress_callback:
+            progress_callback("Parsing the files")
+
         for file_name, file_content in file_contents:
             documents.extend(
                 LlamaParse(result_type="markdown").load_data(
                     file_content.getvalue(), extra_info={"file_name": file_name}
                 )
             )
-        logger.info("Creating index from documents")
+
+        if progress_callback:
+            progress_callback("Training the chatbot")
+
         VectorStoreIndex.from_documents(documents, storage_context=storage_context)
         return {"message": "Chatbot trained successfully!", "status": 200}
     except Exception as e:
@@ -67,21 +78,28 @@ def train_with_files(files, org_name):
         }
 
 
-def train_with_urls(urls, org_name):
+def train_with_urls(urls, org_name, progress_callback):
     """
     Train the chatbot with a list of URLs.
     """
     try:
         storage_context = initalize_vector_store(org_name)
         app = FirecrawlApp(api_key=FIRECRAWL_API_KEY)
+
         documents = []
+
+        if progress_callback:
+            progress_callback("Going through the URLs")
+
         for url in urls:
             result = app.scrape_url(url)
             content = result["markdown"]
             doc = Document(text=content, metadata={"url": url})
             documents.append(doc)
 
-        logger.info("Creating index from documents")
+        if progress_callback:
+            progress_callback("Training the chatbot")
+
         VectorStoreIndex.from_documents(documents, storage_context=storage_context)
         return {"message": "Chatbot trained successfully!", "status": 200}
     except Exception as e:
