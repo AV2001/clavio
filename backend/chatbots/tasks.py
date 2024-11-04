@@ -8,43 +8,35 @@ from .models import Chatbot
 
 logger = logging.getLogger(__name__)
 
+
 @shared_task(bind=True, max_retries=3)
 def train_chatbot_task(self, chatbot_id, training_method, files=None, urls=None):
-    logger.info(f"Started training chatbot {chatbot_id}")
     channel_layer = get_channel_layer()
 
-    try:
-        # Send initial status
+    def send_progress(message):
         async_to_sync(channel_layer.group_send)(
             f"chatbot_{chatbot_id}",
             {
                 "type": "chatbot_status",
                 "message": {
                     "status": "training",
-                    "message": "Started training the chatbot...",
+                    "message": message,
                 },
             },
         )
+
+    try:
+        send_progress("Initializing training job")
 
         chatbot = Chatbot.objects.get(id=chatbot_id)
         org_name = chatbot.organization.name
 
-        # Update progress periodically
-        async_to_sync(channel_layer.group_send)(
-            f"chatbot_{chatbot_id}",
-            {
-                "type": "chatbot_status",
-                "message": {
-                    "status": "training",
-                    "message": "Processing data...",
-                },
-            },
-        )
-
         if training_method == "files":
-            response = train_with_files(files, org_name)
+            response = train_with_files(
+                files, org_name, progress_callback=send_progress
+            )
         elif training_method == "urls":
-            response = train_with_urls(urls, org_name)
+            response = train_with_urls(urls, org_name, progress_callback=send_progress)
 
         if response["status"] == 200:
             chatbot.status = "live"
