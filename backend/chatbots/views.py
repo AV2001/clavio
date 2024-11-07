@@ -3,7 +3,7 @@ from io import BytesIO
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
-from .train import train_chatbot
+from .train import train_with_files, train_with_urls
 from organizations.models import Organization
 from .models import Chatbot
 from django.shortcuts import get_object_or_404
@@ -18,28 +18,30 @@ class ChatbotView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        org_name = "insurance"
         try:
             chatbot_name = request.data.get("chatbotName")
             initial_message = request.data.get("initialMessage")
-            bot_image = request.data.get("botImage")
+            # bot_image = request.data.get("botImage")
             primary_color = request.data.get("primaryColor")
             secondary_color = request.data.get("secondaryColor")
             chatbot_border_radius = request.data.get("borderRadius")
             font_size = request.data.get("fontSize")
             widget_color = request.data.get("widgetColor")
             widget_border_radius = request.data.get("widgetBorderRadius")
-            files = request.FILES.getlist("files")
+            training_method = request.data.get("trainingMethod")
 
-            if not files:
-                return Response({"error": "No files uploaded"}, status=400)
-
-            # Process files directly from memory
-            file_contents = []
-            for file in files:
-                content = file.read()
-                file_contents.append((file.name, BytesIO(content)))
-
-            response = train_chatbot(file_contents)
+            if training_method == "files":
+                files = request.FILES.getlist("files")
+                if not files:
+                    return Response({"error": "No files uploaded"}, status=400)
+                response = train_with_files(files, org_name)
+            elif training_method == "urls":
+                urls = request.data.getlist("urls")
+                print(urls)
+                if not urls:
+                    return Response({"error": "No URLs provided"}, status=400)
+                response = train_with_urls(urls, org_name)
             chatbot = Chatbot.objects.create(
                 organization=Organization.objects.get(
                     id="7c994c28-6d35-42df-a722-887a86659d8b"
