@@ -20,6 +20,9 @@ class Chatbot(models.Model):
     widget_border_radius = models.IntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    STATUS_CHOICES = [("training", "Training"), ("live", "Live"), ("failed", "Failed")]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="training")
+
     class Meta:
         db_table = "chatbots"
 
