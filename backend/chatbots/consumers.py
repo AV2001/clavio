@@ -9,7 +9,6 @@ from llama_index.core import (
     Settings,
     VectorStoreIndex,
     StorageContext,
-    PromptTemplate,
 )
 from django.apps import apps
 from llama_index.core.llms import ChatMessage
@@ -17,9 +16,14 @@ from llama_index.core.memory import ChatSummaryMemoryBuffer
 from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.llms.openai import OpenAI
 from llama_index.vector_stores.milvus import MilvusVectorStore
-
+from llama_index.core.tools import QueryEngineTool, ToolMetadata
+from llama_index.core.agent import ReActAgent
 
 logger = logging.getLogger(__name__)
+
+Settings.llm = OpenAI(model="gpt-4o-mini")
+Settings.embed_model = OpenAIEmbedding(model="text-embedding-3-large")
+
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -42,45 +46,78 @@ class ChatConsumer(AsyncWebsocketConsumer):
             except Exception as e:
                 logger.error(f"Error parsing query parameters: {str(e)}")
 
-        # Initialize the chatbot with memory for the user to start the conversation
-        self.model = "gpt-4o-mini"
-        llm = OpenAI(model=self.model)
-        self.tokenizer = tiktoken.encoding_for_model(self.model)
-        self.memory = ChatSummaryMemoryBuffer.from_defaults(
-            llm=llm, token_limit=256, tokenizer_fn=self.tokenizer.encode
-        )
+        model = "gpt-4o-mini"
+        llm = OpenAI(model=model)
+
+        # self.tokenizer = tiktoken.encoding_for_model(model)
+        # self.memory = ChatSummaryMemoryBuffer.from_defaults(
+        #     llm=llm, token_limit=256, tokenizer_fn=self.tokenizer.encode
+        # )
         self.total_tokens = 0
 
         # Fetch the chatbot details from the database
         self.chatbot = await self.get_chatbot()
 
         # Fetch the organization name
-        self.organization_name = await self.get_organization_name()
+        organization_name = await self.get_organization_name()
 
         # Create ChatbotUser instance
         self.chatbot_user = await self.create_chatbot_user(
             full_name, email, self.chatbot
         )
 
-        self.memory.put(
-            ChatMessage(role="assistant", content=self.chatbot.initial_message)
-        )
+        # self.memory.put(
+        #     ChatMessage(role="assistant", content=self.chatbot.initial_message)
+        # )
 
-        self.first_name = full_name.split(" ")[0]
+        first_name = full_name.split(" ")[0]
 
         # Initialize vector store
-        self.vector_store = MilvusVectorStore(
+        vector_store = MilvusVectorStore(
             uri=ZILLIZ_URI,
             token=ZILLIZ_TOKEN,
-            collection_name=self.organization_name,
+            collection_name=organization_name,
             dim=3072,
         )
 
-        self.storage_context = StorageContext.from_defaults(
-            vector_store=self.vector_store
-        )
+        storage_context = StorageContext.from_defaults(vector_store=vector_store)
         self.index = VectorStoreIndex.from_vector_store(
-            self.vector_store, storage_context=self.storage_context
+            vector_store, storage_context=storage_context
+        )
+
+        # Update the initialization of tools and agent
+        query_engine = self.index.as_query_engine()
+        tools = [
+            QueryEngineTool(
+                query_engine=query_engine,
+                metadata=ToolMetadata(
+                    name="knowledge_retriever",
+                    description="Use for retrieving information from the knowledge base",
+                ),
+            ),
+        ]
+
+        context = """
+        "You are {name}, a dedicated AI assistant at {organization_name} focused on providing accurate, helpful responses within the scope of the provided context. "
+        "Your role is to answer questions related to this specific context, and you are unable to provide information beyond it. However, you may answer "
+        "basic questions about yourself, such as your purpose or capabilities, while maintaining a friendly, respectful tone. Address {first_name} by name occasionally, "
+        "in a natural and non-repetitive way, to build a polite and friendly connection. Your responses should always be:"
+        "\n1. Accurate and based only on the provided context"
+        "\n2. Clear, concise, and to the point"
+        "\n3. Friendly, respectful, and professional"
+        "\nIf asked about topics outside the context, kindly clarify that you're limited to answering within your focus area and can only offer information "
+        "related to this specific context."
+        """
+
+        self.agent = ReActAgent.from_tools(
+            tools=tools,
+            llm=llm,
+            verbose=True,
+            context=context.format(
+                name=self.chatbot.name,
+                organization_name=organization_name,
+                first_name=first_name,
+            ),
         )
 
         # Send the initial message
@@ -114,16 +151,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
         logger.info(f"Total tokens used in this session: {self.total_tokens}")
 
         # Get the chat history
-        chat_history = self.memory.get()
-        history_str = "\n".join(
-            [
-                f"{msg.role.replace("MessageRole.","")}: {msg.content}"
-                for msg in chat_history
-            ]
-        )
+        # chat_history = self.memory.get()
+        # history_str = "\n".join(
+        #     [
+        #         f"{msg.role.replace("MessageRole.","")}: {msg.content}"
+        #         for msg in chat_history
+        #     ]
+        # )
 
-        # Update the ChatbotUser with the chat history
-        await self.update_chatbot_user_history(history_str)
+        # # Update the ChatbotUser with the chat history
+        # await self.update_chatbot_user_history(history_str)
 
     @database_sync_to_async
     def update_chatbot_user_history(self, history):
@@ -141,67 +178,42 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return
 
         # Add user message to memory and count tokens
-        self.memory.put(ChatMessage(role="user", content=query))
-        self.total_tokens += len(self.tokenizer.encode(query))
+        # self.memory.put(ChatMessage(role="user", content=query))
+        # self.total_tokens += len(self.tokenizer.encode(query))
 
         # Get chatbot response
         response = await self.get_chatbot_response(query)
 
         # Add assistant response to memory and count tokens
-        self.memory.put(ChatMessage(role="assistant", content=response))
-        self.total_tokens += len(self.tokenizer.encode(response))
+        # self.memory.put(ChatMessage(role="assistant", content=response))
+        # self.total_tokens += len(self.tokenizer.encode(response))
 
         # Get the summarized chat history
-        history = self.memory.get()
+        # history = self.memory.get()
 
         await self.send(
             text_data=json.dumps(
                 {
                     "query": query,
                     "response": response,
-                    "history": [msg.content for msg in history],
+                    # "history": [msg.content for msg in history],
                     "total_tokens": self.total_tokens,
                 }
             )
         )
 
     async def get_chatbot_response(self, query):
-        Settings.llm = OpenAI(model=self.model)
-        Settings.embed_model = OpenAIEmbedding(model="text-embedding-3-large")
         try:
-            # Get chat history
-            chat_history = self.memory.get()
-            chat_history_str = "\n".join(
-                [f"{msg.role}: {msg.content}" for msg in chat_history]
-            )
+            # Use ReAct Agent for response generation
+            response = self.agent.chat(query)
 
-            # Define a custom prompt template
-            custom_prompt_template = PromptTemplate(
-                "You are {name}, a dedicated AI assistant at {organization_name} focused on providing accurate, helpful responses within the scope of the provided context. "
-                "Your role is to answer questions related to this specific context, and you are unable to provide information beyond it. However, you may answer "
-                "basic questions about yourself, such as your purpose or capabilities, while maintaining a friendly, respectful tone. Address {first_name} by name occasionally, "
-                "in a natural and non-repetitive way, to build a polite and friendly connection. Your responses should always be:"
-                "\n1. Accurate and based only on the provided context"
-                "\n2. Clear, concise, and to the point"
-                "\n3. Friendly, respectful, and professional"
-                "\nIf asked about topics outside the context, kindly clarify that you're limited to answering within your focus area and can only offer information "
-                "related to this specific context.\n\n"
-                "Chat History:\n{chat_history}\n\n"
-                "Context: {context_str}\n"
-                "Question: {query_str}\n"
-                "Answer: "
-            )
+            print("👇👇👇👇👇")
+            print(type(response))
 
-            query_engine = self.index.as_query_engine(
-                text_qa_template=custom_prompt_template.partial_format(
-                    name=self.chatbot.name,
-                    chat_history=chat_history_str,
-                    first_name=self.first_name,
-                    organization_name=self.organization_name,
-                ),
-            )
-            response = await query_engine.aquery(query)
-            return response.response
+            # Extract the response text from the AgentChatResponse object
+            response_text = str(response.response)
+            return response_text
+
         except Exception as e:
             logger.error(f"An error occurred while processing the question: {str(e)}")
             return "I'm sorry, I'm having trouble processing your question. Please try again later."

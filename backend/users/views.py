@@ -1,8 +1,10 @@
 import logging
 from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from .models import User
+from .serializers import UserSerializer
+
 
 logger = logging.getLogger(__name__)
 
@@ -15,9 +17,7 @@ class UserView(APIView):
             full_name = request.data.get("fullName")
             email = request.data.get("email")
             password = request.data.get("password")
-            print(type(request.data))
-            print(request.data)
-            print(full_name, email, password)
+            is_admin = request.data.get("isAdmin")
 
             if not full_name or not email:
                 return Response({"error": "Missing required fields."}, status=400)
@@ -29,6 +29,7 @@ class UserView(APIView):
                 full_name=full_name,
                 email=email,
                 password=password,
+                is_admin=is_admin,
             )
             user.save()
 
@@ -52,13 +53,19 @@ class UserDetailView(APIView):
 
     def get(self, request):
         try:
-            email = request.data.get("email")
-            user = User.objects.filter(email=email).first()
+            email = request.query_params.get("email")
+            user = User.objects.get(email=email)
+
+            if not user:
+                return Response({"error": "User not found."}, status=404)
+
             user_data = {
                 "email": user.email,
                 "id": user.id,
                 "name": user.full_name,
+                "needsOnboarding": user.needs_onboarding,
             }
+
             return Response(
                 {"data": user_data},
                 status=200,

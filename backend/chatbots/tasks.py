@@ -10,7 +10,9 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task(bind=True, max_retries=3)
-def train_chatbot_task(self, chatbot_id, training_method, files=None, urls=None):
+def train_chatbot_task(
+    self, chatbot_id, training_method, file_contents=None, urls=None
+):
     channel_layer = get_channel_layer()
 
     def send_progress(message):
@@ -33,7 +35,7 @@ def train_chatbot_task(self, chatbot_id, training_method, files=None, urls=None)
 
         if training_method == "files":
             response = train_with_files(
-                files, org_name, progress_callback=send_progress
+                file_contents, org_name, progress_callback=send_progress
             )
         elif training_method == "urls":
             response = train_with_urls(urls, org_name, progress_callback=send_progress)

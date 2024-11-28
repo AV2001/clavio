@@ -41,4 +41,4 @@ class ChatbotUser(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = "chatbot_users"
+        db_table = "organization_customers"

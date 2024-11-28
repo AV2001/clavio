@@ -16,8 +16,6 @@
     };
     let ws;
 
-    
-
     // Add Inter font
     const fontLink = document.createElement('link');
     fontLink.href =
@@ -26,7 +24,7 @@
     document.head.appendChild(fontLink);
 
     // Add Tailwind CSS
-    const styleSheet = document.createElement("style");
+    const styleSheet = document.createElement('style');
     styleSheet.textContent = `
         @keyframes bounce {
             0%, 100% { transform: translateY(0); }
@@ -102,7 +100,7 @@
             padding: 10px !important;
             border: 1px solid #ddd !important;
         }
-        
+
         #ai-chat-input-field:focus {
             border: 1px solid ${config.primaryColor} !important;
             outline: none !important;
@@ -110,33 +108,15 @@
     `;
     document.head.appendChild(styleSheet);
 
-    function initWebSocket(params = {}) {
-      // Construct WebSocket URL with query parameters
-      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsBase = `${wsProtocol}//localhost:8000/ws/chat/${config.embedId}/`;
+    function initWebSocket(params) {
+      const queryParams = new URLSearchParams({
+        fullName: params.fullName,
+        email: params.email,
+      }).toString();
 
-      // Add query parameters if they exist
-      const queryParams = new URLSearchParams(params).toString();
-      const wsUrl = queryParams ? `${wsBase}?${queryParams}` : wsBase;
-
-      ws = new WebSocket(wsUrl);
-
-      ws.onopen = function () {
-        console.log('WebSocket connection established');
-      };
-
-      ws.onmessage = function (event) {
-        const response = JSON.parse(event.data).response;
-        if (response) {
-          appendMessage('bot', response);
-        }
-      };
-
-      ws.onerror = function (error) {
-        console.error('WebSocket error:', error);
-      };
-
-      return ws;
+      // Use the base ws_url from config and append the path
+      const wsUrl = `${config.wsUrl}/ws/chat/${config.embedId}/?${queryParams}`;
+      return new WebSocket(wsUrl);
     }
 
     function appendMessage(sender, message, isTyping = false) {
@@ -162,19 +142,25 @@
         const typingId = isTyping ? `typing-${Date.now()}` : null;
         messageDiv.innerHTML = `
             <div style="display: flex; gap: 10px; align-items: flex-start;">
-                <div style="width: 30px; height: 30px; background: ${config.primaryColor}; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 3px;">
+                <div style="width: 30px; height: 30px; background: ${
+                  config.primaryColor
+                }; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 3px;">
                     <svg style="width: 20px; height: 20px; color: white;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
                     </svg>
                 </div>
-                <div style="background-color: ${config.primaryColor}20; padding: 10px 15px; border-radius: 15px; max-width: 70%;">
-                    ${isTyping ? 
-                        `<div id="${typingId}" style="display: flex; gap: 3px; padding: 5px;">
+                <div style="background-color: ${
+                  config.primaryColor
+                }20; padding: 10px 15px; border-radius: 15px; max-width: 70%;">
+                    ${
+                      isTyping
+                        ? `<div id="${typingId}" style="display: flex; gap: 3px; padding: 5px;">
                             <div style="width: 6px; height: 6px; background: ${config.primaryColor}; border-radius: 50%; animation: bounce 0.8s infinite;"></div>
                             <div style="width: 6px; height: 6px; background: ${config.primaryColor}; border-radius: 50%; animation: bounce 0.8s infinite 0.2s;"></div>
                             <div style="width: 6px; height: 6px; background: ${config.primaryColor}; border-radius: 50%; animation: bounce 0.8s infinite 0.4s;"></div>
-                        </div>` 
-                        : `<p style="margin: 0;">${message}</p>`}
+                        </div>`
+                        : `<p style="margin: 0;">${message}</p>`
+                    }
                 </div>
             </div>
         `;
@@ -182,33 +168,33 @@
 
       messagesContainer.appendChild(messageDiv);
       messagesContainer.scrollTop = messagesContainer.scrollHeight;
-      
+
       return messageDiv; // Return the entire message div for later reference
     }
 
     function sendMessage(query) {
-        if (query && ws && ws.readyState === WebSocket.OPEN) {
-            // Send user message
-            ws.send(JSON.stringify({ query: query }));
-            appendMessage('user', query);
-            
-            // Create typing indicator
-            const typingMessageDiv = appendMessage('bot', '', true);
-            
-            // Update the onmessage handler
-            ws.onmessage = function (event) {
-                const response = JSON.parse(event.data).response;
-                if (response) {
-                    // Find the typing indicator message div
-                    const typingDiv = typingMessageDiv.querySelector('[id^="typing-"]');
-                    if (typingDiv) {
-                        // Replace the typing animation with the actual message
-                        const messageContainer = typingDiv.parentElement;
-                        messageContainer.innerHTML = `<p style="margin: 0;">${response}</p>`;
-                    }
-                }
-            };
-        }
+      if (query && ws && ws.readyState === WebSocket.OPEN) {
+        // Send user message
+        ws.send(JSON.stringify({ query: query }));
+        appendMessage('user', query);
+
+        // Create typing indicator
+        const typingMessageDiv = appendMessage('bot', '', true);
+
+        // Update the onmessage handler
+        ws.onmessage = function (event) {
+          const response = JSON.parse(event.data).response;
+          if (response) {
+            // Find the typing indicator message div
+            const typingDiv = typingMessageDiv.querySelector('[id^="typing-"]');
+            if (typingDiv) {
+              // Replace the typing animation with the actual message
+              const messageContainer = typingDiv.parentElement;
+              messageContainer.innerHTML = `<p style="margin: 0;">${response}</p>`;
+            }
+          }
+        };
+      }
     }
 
     function initChatWidget() {
@@ -237,7 +223,7 @@
                       <svg style="width: 24px; height: 24px; color: white;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                           <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
                       </svg>
-                      <span style="color: ${config.secondaryColor}; font-weight: 500;">AI Assistant</span>
+                      <span style="color: ${config.secondaryColor}; font-weight: 500;">${config.name}</span>
                   </div>
                   <div style="display: flex; gap: 10px; align-items: center;">
                       <button id="ai-chat-end" style="color: ${config.secondaryColor}; border: 1px solid ${config.secondaryColor}; padding: 5px 15px; border-radius: 5px; background: transparent; cursor: pointer;">
@@ -273,13 +259,13 @@
 
               <div id="chat-input-area" style="padding: 15px; border-top: 1px solid #eee; display: none;">
                   <div style="display: flex; gap: 10px;">
-                      <input type="text" 
-                          id="ai-chat-input-field" 
-                          placeholder="Type a message..." 
+                      <input type="text"
+                          id="ai-chat-input-field"
+                          placeholder="Type a message..."
                           style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: ${config.chatbotBorderRadius}px; outline: none;"
                           onFocus="this.style.border='1px solid ${config.primaryColor}'"
                           onBlur="this.style.border='1px solid #ddd'">
-                      <button id="ai-chat-send" 
+                      <button id="ai-chat-send"
                           style="background-color: ${config.primaryColor}; border: none; padding: 10px; border-radius: ${config.chatbotBorderRadius}px; cursor: pointer; display:flex; align-items: center; justify-content:center;">
                           <svg style="width: 20px; height: 20px; color: ${config.secondaryColor};" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                               <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
@@ -350,49 +336,50 @@
         if (!form) return;
 
         form.addEventListener('submit', function (e) {
-            e.preventDefault();
+          e.preventDefault();
 
-            // Get form data
-            const formData = new FormData(this);
-            const params = {
-                fullName: formData.get('full_name'),
-                email: formData.get('email'),
-            };
+          // Get form data
+          const formData = new FormData(this);
+          const params = {
+            fullName: formData.get('full_name'),
+            email: formData.get('email'),
+          };
 
-            // Initialize WebSocket with form parameters
-            ws = initWebSocket(params);
+          // Initialize WebSocket with form parameters
+          ws = initWebSocket(params);
 
-            ws.onopen = () => {
-                // Remove the form
-                this.remove();
+          ws.onopen = () => {
+            // Remove the form
+            this.remove();
 
-                // Show the chat input area
-                document.getElementById('chat-input-area').style.display = 'block';
+            // Show the chat input area
+            document.getElementById('chat-input-area').style.display = 'block';
 
-                // Create typing indicator and store reference
-                const typingMessageDiv = appendMessage('bot', '', true);
-                
-                // Update onmessage to handle the initial greeting
+            // Create typing indicator and store reference
+            const typingMessageDiv = appendMessage('bot', '', true);
+
+            // Update onmessage to handle the initial greeting
+            ws.onmessage = function (event) {
+              const response = JSON.parse(event.data).response;
+              if (response) {
+                // Find and replace typing indicator with actual message
+                const typingDiv =
+                  typingMessageDiv.querySelector('[id^="typing-"]');
+                if (typingDiv) {
+                  const messageContainer = typingDiv.parentElement;
+                  messageContainer.innerHTML = `<p style="margin: 0;">${response}</p>`;
+                }
+
+                // Reset onmessage to normal handler for future messages
                 ws.onmessage = function (event) {
-                    const response = JSON.parse(event.data).response;
-                    if (response) {
-                        // Find and replace typing indicator with actual message
-                        const typingDiv = typingMessageDiv.querySelector('[id^="typing-"]');
-                        if (typingDiv) {
-                            const messageContainer = typingDiv.parentElement;
-                            messageContainer.innerHTML = `<p style="margin: 0;">${response}</p>`;
-                        }
-                        
-                        // Reset onmessage to normal handler for future messages
-                        ws.onmessage = function(event) {
-                            const response = JSON.parse(event.data).response;
-                            if (response) {
-                                appendMessage('bot', response);
-                            }
-                        };
-                    }
+                  const response = JSON.parse(event.data).response;
+                  if (response) {
+                    appendMessage('bot', response);
+                  }
                 };
+              }
             };
+          };
         });
       }
 
@@ -404,27 +391,28 @@
         const input = document.getElementById('ai-chat-input-field');
         const query = input.value.trim();
         if (query) {
-            input.value = ''; // Clear input immediately
-            sendMessage(query);
+          input.value = ''; // Clear input immediately
+          sendMessage(query);
         }
       });
 
-      document.getElementById('ai-chat-input-field').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
+      document
+        .getElementById('ai-chat-input-field')
+        .addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
             e.preventDefault();
             const input = document.getElementById('ai-chat-input-field');
             const query = input.value.trim();
             if (query) {
-                input.value = ''; // Clear input immediately
-                sendMessage(query);
+              input.value = ''; // Clear input immediately
+              sendMessage(query);
             }
-        }
-      });
+          }
+        });
     }
 
     // Initialize the widget
     initChatWidget();
-
   } catch (error) {
     console.error('Failed to initialize chatbot:', error);
   }

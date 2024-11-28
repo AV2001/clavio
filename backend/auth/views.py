@@ -1,65 +1,52 @@
+from django.contrib.auth import get_user_model
+from django.middleware import csrf
+from django.contrib.auth import authenticate
 from rest_framework.views import APIView
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import AllowAny
-from django.contrib.auth import get_user_model
-from datetime import datetime
-from django.conf import settings
 
 User = get_user_model()
 
 
-class TokenObtainView(APIView):
+def get_tokens_for_user(user):
+    refresh = RefreshToken.for_user(user)
+    return {
+        "refresh": str(refresh),
+        "access": str(refresh.access_token),
+    }
+
+
+class LoginView(APIView):
+    authentication_classes = [JWTAuthentication]
     permission_classes = [AllowAny]
 
-    def post(self, request):
-        try:
-            email = request.data.get("email")
-            if not email:
-                return Response({"error": "Email is required"}, status=400)
+    def post(self, request, format=None):
+        response = Response()
+        email = request.data.get("email")
+        user = authenticate(email=email)
 
-            try:
-                user = User.objects.get(email=email)
-            except User.DoesNotExist:
-                return Response(
-                    {
-                        "error": "No account found with this email address. Please register first."
+        if user is not None:
+            if user.is_active:
+                tokens = get_tokens_for_user(user)
+                csrf_token = csrf.get_token(request)
+
+                response.data = {
+                    "message": "Login successfully",
+                    "tokens": {
+                        **tokens,
+                        "csrf": csrf_token,
                     },
+                }
+                return response
+            else:
+                return Response(
+                    {"error": "This account is not active!!"},
                     status=404,
                 )
-
-            # Generate JWT tokens
-            refresh = RefreshToken.for_user(user)
-            
-            response = Response({"message": "Login successful"})
-            
-            # Set cookies
-            response.set_cookie(
-                'access_token',
-                str(refresh.access_token),
-                httponly=True,
-                secure=True,  # Only send over HTTPS
-                samesite='Lax',
-                expires=datetime.now() + settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME']
+        else:
+            return Response(
+                {"error": "Invalid username or password!!"},
+                status=404,
             )
-            
-            response.set_cookie(
-                'refresh_token',
-                str(refresh),
-                httponly=True,
-                secure=True,  # Only send over HTTPS
-                samesite='Lax',
-                expires=datetime.now() + settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME']
-            )
-
-            return response
-
-        except Exception as e:
-            return Response({"error": str(e)}, status=500)
-
-class LogoutView(APIView):
-    def post(self, request):
-        response = Response({"message": "Logged out successfully"})
-        response.delete_cookie('access_token')
-        response.delete_cookie('refresh_token')
-        return response

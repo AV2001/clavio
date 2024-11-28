@@ -36,10 +36,11 @@ class User(AbstractBaseUser):
     password = models.CharField(max_length=255, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     needs_onboarding = models.BooleanField(default=True)
+    is_admin = models.BooleanField(default=False)
     organization = models.ForeignKey(
         Organization,
         on_delete=models.CASCADE,
-        related_name="users",
+        related_name="organization_employees",
         null=True,
         blank=True,
     )
@@ -50,7 +51,7 @@ class User(AbstractBaseUser):
     objects = UserManager()
 
     class Meta:
-        db_table = "users"
+        db_table = "organization_employees"
 
     def save(self, *args, **kwargs):
         if self._state.adding or self._password_has_changed():

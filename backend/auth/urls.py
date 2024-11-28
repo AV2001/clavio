@@ -1,7 +1,8 @@
 from django.urls import path
-from .views import TokenObtainView, LogoutView
+from .views import LoginView
+from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
-    path("token/", TokenObtainView.as_view(), name="token-get"),
-    path("logout/", LogoutView.as_view(), name="logout"),
+    path("login/", LoginView.as_view(), name="login"),
+    path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
 ]

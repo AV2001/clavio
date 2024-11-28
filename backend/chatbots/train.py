@@ -13,6 +13,7 @@ from llama_index.llms.openai import OpenAI
 from llama_index.embeddings.openai import OpenAIEmbedding
 from backend.settings.base import FIRECRAWL_API_KEY, ZILLIZ_URI, ZILLIZ_TOKEN
 from firecrawl.firecrawl import FirecrawlApp
+import base64
 
 
 # Load environment variables
@@ -38,30 +39,28 @@ def initalize_vector_store(org_name):
     return StorageContext.from_defaults(vector_store=vector_store)
 
 
-def train_with_files(files, org_name, progress_callback):
+def train_with_files(file_contents, org_name, progress_callback):
     """
     Train the chatbot with a list of files.
     """
     try:
         storage_context = initalize_vector_store(org_name)
-        file_contents = []
+        documents = []
 
         if progress_callback:
             progress_callback("Processing the files")
 
-        for file in files:
-            content = file.read()
-            file_contents.append((file.name, BytesIO(content)))
+        for file in file_contents:
+            # Decode base64 content back to bytes
+            content = base64.b64decode(file["content"])
+            file_name = file["name"]
 
-        documents = []
+            # Create BytesIO object from content
+            file_obj = BytesIO(content)
 
-        if progress_callback:
-            progress_callback("Parsing the files")
-
-        for file_name, file_content in file_contents:
             documents.extend(
                 LlamaParse(result_type="markdown").load_data(
-                    file_content.getvalue(), extra_info={"file_name": file_name}
+                    file_obj, extra_info={"file_name": file_name}
                 )
             )
 

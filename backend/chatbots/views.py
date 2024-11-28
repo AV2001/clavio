@@ -10,6 +10,7 @@ from organizations.models import Organization
 from .serializers import ChatbotListSerializer, ChatbotDetailSerializer
 from .models import Chatbot
 from .tasks import train_chatbot_task
+import base64
 
 
 logger = logging.getLogger(__name__)
@@ -21,7 +22,7 @@ class ChatbotView(APIView):
     def get(self, request):
         try:
             chatbots = Chatbot.objects.filter(
-                organization="7c994c28-6d35-42df-a722-887a86659d8b"
+                organization="4e02db5b-7bc9-4e91-b5d0-e4a97d92b41d"
             )
             serializer = ChatbotListSerializer(chatbots, many=True)
             return Response(serializer.data, status=200)
@@ -37,12 +38,10 @@ class ChatbotView(APIView):
     def post(self, request):
         try:
             with transaction.atomic():
-                # Log the incoming request data
-                logger.info(f"Received request data: {request.data}")
-
+                # Create chatbot object
                 chatbot = Chatbot.objects.create(
                     organization=Organization.objects.get(
-                        id="7c994c28-6d35-42df-a722-887a86659d8b"
+                        id="4e02db5b-7bc9-4e91-b5d0-e4a97d92b41d"
                     ),
                     name=request.data.get("chatbotName"),
                     initial_message=request.data.get("initialMessage"),
@@ -55,29 +54,38 @@ class ChatbotView(APIView):
                     status="training",
                 )
 
-                # Log successful chatbot creation
-                logger.info(f"Created chatbot with ID: {chatbot.id}")
-
                 training_method = request.data.get("trainingMethod")
-                files = (
-                    request.FILES.getlist("files")
-                    if training_method == "files"
-                    else None
-                )
-                urls = (
-                    request.data.getlist("urls") if training_method == "urls" else None
-                )
+                file_contents = None
+                urls = None
+
+                if training_method == "files":
+                    files = request.FILES.getlist("files")
+                    print("👇👇👇👇👇")
+                    print(f"Number of files: {len(files)}")
+                    file_contents = []
+                    for file in files:
+                        # Read as bytes and encode to base64 for safe serialization
+                        content = base64.b64encode(file.read()).decode("utf-8")
+                        file_contents.append(
+                            {
+                                "name": file.name,
+                                "content": content,
+                                "content_type": file.content_type,
+                            }
+                        )
+                elif training_method == "urls":
+                    urls = request.data.getlist("urls")
 
                 try:
-                    # Log task creation attempt
                     logger.info(
                         f"Attempting to create Celery task for chatbot {chatbot.id}"
                     )
-
                     train_chatbot_task.delay(
-                        str(chatbot.id), training_method, files=files, urls=urls
+                        str(chatbot.id),
+                        training_method,
+                        file_contents=file_contents,
+                        urls=urls,
                     )
-
                     logger.info("Celery task created successfully")
                 except Exception as task_error:
                     logger.error(f"Failed to create Celery task: {str(task_error)}")
@@ -108,7 +116,10 @@ class ChatbotEmbedScriptView(APIView):
             # Get the base URL and WebSocket URL
             base_url = request.build_absolute_uri("/").rstrip("/")
             ws_protocol = "wss" if request.is_secure() else "ws"
-            ws_url = f"{ws_protocol}://{request.get_host()}/ws/chat/{chatbot.embed_id}/"
+            ws_host = request.get_host()
+
+            # Change this line to only provide the base WebSocket URL
+            ws_url = f"{ws_protocol}://{ws_host}"  # Remove the /ws/chat/{chatbot.embed_id}/ part
 
             # Render the JavaScript template
             script = render_to_string(
@@ -120,7 +131,6 @@ class ChatbotEmbedScriptView(APIView):
                 },
             )
 
-            # Return as a proper JavaScript response
             return HttpResponse(
                 script,
                 content_type="application/javascript; charset=utf-8",

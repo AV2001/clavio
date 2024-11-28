@@ -22,6 +22,9 @@ DB_PORT = os.getenv("DB_PORT")
 ZILLIZ_URI = os.getenv("ZILLIZ_URI")
 ZILLIZ_TOKEN = os.getenv("ZILLIZ_TOKEN")
 
+# OpenAI API Key
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
 # Firecrawl API Key
 FIRECRAWL_API_KEY = os.getenv("FIRECRAWL_API_KEY")
 
