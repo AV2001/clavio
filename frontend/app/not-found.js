@@ -3,7 +3,6 @@ import { Button } from '@/app/_components/shadcn/button';
 
 export default function NotFound() {
   return (
-    
     <main className='flex-grow px-6 mx-auto max-w-7xl min-h-screen flex flex-col items-center justify-center'>
       <h1 className='text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl mb-4'>
         404
