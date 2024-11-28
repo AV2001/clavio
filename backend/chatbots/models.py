@@ -19,6 +19,7 @@ class Chatbot(models.Model):
     widget_color = models.CharField(max_length=10, null=True, blank=True)
     widget_border_radius = models.IntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    chatbot_type = models.CharField(max_length=20, blank=True, null=True)
 
     STATUS_CHOICES = [("training", "Training"), ("live", "Live"), ("failed", "Failed")]
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="training")

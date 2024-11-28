@@ -51,6 +51,7 @@ class ChatbotView(APIView):
                     font_size=request.data.get("fontSize"),
                     widget_color=request.data.get("widgetColor"),
                     widget_border_radius=request.data.get("widgetBorderRadius"),
+                    chatbot_type=request.data.get("chatbotType"),
                     status="training",
                 )
 
