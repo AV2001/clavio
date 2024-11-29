@@ -8,6 +8,7 @@ import { BoxReveal } from '@/app/_components/shadcn/box-reveal';
 import FeaturesSection from '@/app/_components/FeaturesSection';
 import HowItWorksSection from '@/app/_components/HowItWorksSection';
 import PricingSection from '@/app/_components/PricingSection';
+import FAQSection from './_components/FAQSection';
 
 export default function Home() {
   return (
@@ -51,6 +52,7 @@ export default function Home() {
         <FeaturesSection />
         <HowItWorksSection />
         <PricingSection />
+        <FAQSection />
       </main>
 
       <footer className='border-t border-border/40 mt-12'>
