@@ -14,7 +14,7 @@ export default function HowItWorksSection() {
         {howItWorksInView && (
           <WordFadeIn
             words="How It Works"
-            className="text-3xl font-bold text-center mb-12"
+            className="font-bold text-center mb-12"
           />
         )}
         <div className='max-w-3xl mx-auto'>

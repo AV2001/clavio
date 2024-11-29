@@ -15,7 +15,7 @@ export default function FeaturesSection() {
         {featuresInView && (
           <WordFadeIn
             words="Key Features"
-            className="text-3xl font-bold text-center mb-12"
+            className="font-bold text-center mb-12"
           />
         )}
         <div className='grid gap-8 md:grid-cols-2 lg:grid-cols-3'>
