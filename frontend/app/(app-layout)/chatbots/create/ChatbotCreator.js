@@ -17,6 +17,7 @@ export default function ChatbotCreator() {
     botImage: null,
     widgetColor: '#000000',
     widgetBorderRadius: 0,
+    chatbotType: 'external',
   });
 
   return (
@@ -25,9 +26,11 @@ export default function ChatbotCreator() {
         <div className='flex-grow'>
           <CreateChatbotForm onPreviewChange={setPreviewData} />
         </div>
-        <div>
-          <LivePreview {...previewData} />
-        </div>
+        {previewData.chatbotType === 'external' && (
+          <div>
+            <LivePreview {...previewData} />
+          </div>
+        )}
       </div>
 
       <OrganizationModal

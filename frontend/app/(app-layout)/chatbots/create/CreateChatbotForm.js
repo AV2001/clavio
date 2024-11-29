@@ -34,6 +34,7 @@ export default function CreateChatbotForm({ onPreviewChange }) {
       files: [{ file: null }],
       urls: [{ url: '' }],
       trainingMethod: 'files',
+      chatbotType: 'external',
     },
   });
 
@@ -66,6 +67,7 @@ export default function CreateChatbotForm({ onPreviewChange }) {
           'botImage',
           'widgetColor',
           'widgetBorderRadius',
+          'chatbotType',
         ].includes(name)
       ) {
         formValuesRef.current = {
@@ -85,6 +87,7 @@ export default function CreateChatbotForm({ onPreviewChange }) {
             : null,
           widgetColor: formValuesRef.current.widgetColor || '#000000',
           widgetBorderRadius: formValuesRef.current.widgetBorderRadius || 0,
+          chatbotType: formValuesRef.current.chatbotType || 'customer-facing',
         });
       }
     });
@@ -98,6 +101,34 @@ export default function CreateChatbotForm({ onPreviewChange }) {
       <form action={createChatbotAction} className='space-y-8 w-1/2'>
         <div className='space-y-6'>
           <Heading level={3}>Basic Information</Heading>
+          <div>
+            <label className='block text-sm font-medium text-gray-700 mb-2'>
+              Chatbot Type
+            </label>
+            <div className='flex space-x-4 mb-4'>
+              <label className='flex items-center'>
+                <input
+                  type='radio'
+                  value='external'
+                  {...register('chatbotType')}
+                  className='mr-2 h-4 w-4 border-gray-300 text-primary-600 focus:ring-primary-600'
+                />
+                <span className='text-sm text-gray-700'>Customer-Facing</span>
+              </label>
+              <label className='flex items-center'>
+                <input
+                  type='radio'
+                  value='internal'
+                  {...register('chatbotType')}
+                  className='mr-2 h-4 w-4 border-gray-300 text-primary-600 focus:ring-primary-600'
+                />
+                <span className='text-sm text-gray-700'>
+                  Internal (within company)
+                </span>
+              </label>
+            </div>
+          </div>
+
           <div>
             <label
               htmlFor='chatbotName'
@@ -163,124 +194,132 @@ export default function CreateChatbotForm({ onPreviewChange }) {
           </div>
         </div>
 
-        <div className='space-y-6'>
-          <Heading level={3}>Appearance</Heading>
+        {watch('chatbotType') === 'external' && (
+          <>
+            <div className='space-y-6'>
+              <Heading level={3}>Appearance</Heading>
 
-          <div className='grid grid-cols-2 gap-4'>
-            {/* Primary Color */}
-            <div>
-              <Label htmlFor='primaryColor'>Primary Color</Label>
-              <div className='flex items-center gap-2'>
-                <div className='relative w-20 h-10'>
-                  <input
-                    type='color'
-                    id='primaryColor'
-                    {...register('primaryColor')}
-                    className='absolute inset-0 opacity-0 cursor-pointer'
-                  />
-                  <div
-                    className='w-16 h-8 rounded-md border border-gray-300'
-                    style={{ backgroundColor: watch('primaryColor') }}
+              <div className='grid grid-cols-2 gap-4'>
+                {/* Primary Color */}
+                <div>
+                  <Label htmlFor='primaryColor'>Primary Color</Label>
+                  <div className='flex items-center gap-2'>
+                    <div className='relative w-20 h-10'>
+                      <input
+                        type='color'
+                        id='primaryColor'
+                        {...register('primaryColor')}
+                        className='absolute inset-0 opacity-0 cursor-pointer'
+                      />
+                      <div
+                        className='w-16 h-8 rounded-md border border-gray-300'
+                        style={{ backgroundColor: watch('primaryColor') }}
+                      />
+                    </div>
+                    <Input
+                      value={watch('primaryColor')}
+                      onChange={(e) => setValue('primaryColor', e.target.value)}
+                      className='w-28'
+                    />
+                  </div>
+                </div>
+
+                {/* Secondary Color */}
+                <div>
+                  <Label htmlFor='secondaryColor'>Secondary Color</Label>
+                  <div className='flex items-center gap-2'>
+                    <div className='relative w-20 h-10'>
+                      <input
+                        type='color'
+                        id='secondaryColor'
+                        {...register('secondaryColor')}
+                        className='absolute inset-0 opacity-0 cursor-pointer'
+                      />
+                      <div
+                        className='w-16 h-8 rounded-md border border-gray-300'
+                        style={{ backgroundColor: watch('secondaryColor') }}
+                      />
+                    </div>
+                    <Input
+                      value={watch('secondaryColor')}
+                      onChange={(e) =>
+                        setValue('secondaryColor', e.target.value)
+                      }
+                      className='w-28'
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className='space-y-2'>
+                <Label>Border Radius</Label>
+                <input type='hidden' {...register('chatbotBorderRadius')} />
+                <Slider
+                  defaultValue={[0]}
+                  max={20}
+                  step={1}
+                  onValueChange={([value]) =>
+                    setValue('chatbotBorderRadius', value)
+                  }
+                />
+              </div>
+
+              <div className='space-y-2'>
+                <Label>Font Size</Label>
+                <input type='hidden' {...register('fontSize')} />
+                <Slider
+                  defaultValue={[12]}
+                  max={18}
+                  min={12}
+                  step={1}
+                  onValueChange={([value]) => setValue('fontSize', value)}
+                />
+              </div>
+            </div>
+
+            <div className='space-y-6'>
+              <Heading level={3}>Widget Customization</Heading>
+
+              {/* Widget Color */}
+              <div>
+                <Label htmlFor='widgetColor'>Widget Color</Label>
+                <div className='flex items-center gap-2'>
+                  <div className='relative w-20 h-10'>
+                    <input
+                      type='color'
+                      id='widgetColor'
+                      {...register('widgetColor')}
+                      className='absolute inset-0 opacity-0 cursor-pointer'
+                    />
+                    <div
+                      className='w-16 h-8 rounded-md border border-gray-300'
+                      style={{ backgroundColor: watch('widgetColor') }}
+                    />
+                  </div>
+                  <Input
+                    value={watch('widgetColor')}
+                    onChange={(e) => setValue('widgetColor', e.target.value)}
+                    className='w-28'
                   />
                 </div>
-                <Input
-                  value={watch('primaryColor')}
-                  onChange={(e) => setValue('primaryColor', e.target.value)}
-                  className='w-28'
+              </div>
+
+              {/* Widget Border Radius */}
+              <div className='space-y-2'>
+                <Label>Widget Border Radius</Label>
+                <input type='hidden' {...register('widgetBorderRadius')} />
+                <Slider
+                  defaultValue={[0]}
+                  max={28}
+                  step={1}
+                  onValueChange={([value]) =>
+                    setValue('widgetBorderRadius', value)
+                  }
                 />
               </div>
             </div>
-
-            {/* Secondary Color */}
-            <div>
-              <Label htmlFor='secondaryColor'>Secondary Color</Label>
-              <div className='flex items-center gap-2'>
-                <div className='relative w-20 h-10'>
-                  <input
-                    type='color'
-                    id='secondaryColor'
-                    {...register('secondaryColor')}
-                    className='absolute inset-0 opacity-0 cursor-pointer'
-                  />
-                  <div
-                    className='w-16 h-8 rounded-md border border-gray-300'
-                    style={{ backgroundColor: watch('secondaryColor') }}
-                  />
-                </div>
-                <Input
-                  value={watch('secondaryColor')}
-                  onChange={(e) => setValue('secondaryColor', e.target.value)}
-                  className='w-28'
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className='space-y-2'>
-            <Label>Border Radius</Label>
-            <input type='hidden' {...register('chatbotBorderRadius')} />
-            <Slider
-              defaultValue={[0]}
-              max={20}
-              step={1}
-              onValueChange={([value]) =>
-                setValue('chatbotBorderRadius', value)
-              }
-            />
-          </div>
-
-          <div className='space-y-2'>
-            <Label>Font Size</Label>
-            <input type='hidden' {...register('fontSize')} />
-            <Slider
-              defaultValue={[12]}
-              max={18}
-              min={12}
-              step={1}
-              onValueChange={([value]) => setValue('fontSize', value)}
-            />
-          </div>
-        </div>
-
-        <div className='space-y-6'>
-          <Heading level={3}>Widget Customization</Heading>
-
-          {/* Widget Color */}
-          <div>
-            <Label htmlFor='widgetColor'>Widget Color</Label>
-            <div className='flex items-center gap-2'>
-              <div className='relative w-20 h-10'>
-                <input
-                  type='color'
-                  id='widgetColor'
-                  {...register('widgetColor')}
-                  className='absolute inset-0 opacity-0 cursor-pointer'
-                />
-                <div
-                  className='w-16 h-8 rounded-md border border-gray-300'
-                  style={{ backgroundColor: watch('widgetColor') }}
-                />
-              </div>
-              <Input
-                value={watch('widgetColor')}
-                onChange={(e) => setValue('widgetColor', e.target.value)}
-                className='w-28'
-              />
-            </div>
-          </div>
-
-          {/* Widget Border Radius */}
-          <div className='space-y-2'>
-            <Label>Widget Border Radius</Label>
-            <input type='hidden' {...register('widgetBorderRadius')} />
-            <Slider
-              defaultValue={[0]}
-              max={28}
-              step={1}
-              onValueChange={([value]) => setValue('widgetBorderRadius', value)}
-            />
-          </div>
-        </div>
+          </>
+        )}
 
         <div className='space-y-6'>
           <Heading level={3}>Train Chatbot</Heading>
