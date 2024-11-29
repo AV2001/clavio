@@ -18,6 +18,7 @@ pip-delete-this-directory.txt
 .vscode/
 *.swp
 *.swo
+deployment.sh
 
 # Project specific
 *.log
