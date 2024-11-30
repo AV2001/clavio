@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Build and push backend image
-docker build --no-cache -t clavio-backend:latest .
-docker tag clavio-backend:latest registry.digitalocean.com/clavio/clavio-backend
-docker push registry.digitalocean.com/clavio/clavio-backend
+# Build and push backend app image
+docker build --no-cache -t clavio-backend:app .
+docker tag clavio-backend:app registry.digitalocean.com/clavio/clavio-backend:app
+docker push registry.digitalocean.com/clavio/clavio-backend:app
 
 # Build and push celery image
 docker build --no-cache -f Dockerfile.celery -t clavio-backend:celery .
