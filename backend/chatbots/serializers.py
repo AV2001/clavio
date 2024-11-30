@@ -5,7 +5,7 @@ from .models import Chatbot
 class ChatbotListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Chatbot
-        fields = ["id", "name", "status", "created_at"]
+        fields = ["id", "name", "status", "created_at", "chatbot_type"]
 
     def to_representation(self, instance):
         return {
@@ -13,6 +13,7 @@ class ChatbotListSerializer(serializers.ModelSerializer):
             "name": instance.name,
             "status": instance.status,
             "createdAt": instance.created_at,
+            "chatbotType": instance.chatbot_type,
         }
 
 
