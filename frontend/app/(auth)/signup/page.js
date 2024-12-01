@@ -1,7 +1,5 @@
 import Link from 'next/link';
-import { Button } from '@/app/_components/shadcn/button';
-import { Input } from '@/app/_components/shadcn/input';
-import { Label } from '@/app/_components/shadcn/label';
+import SignUpForm from '@/app/_components/auth/SignUpForm';
 import GoogleButton from '@/app/_components/GoogleButton';
 import MicrosoftButton from '@/app/_components/MicrosoftButton';
 
@@ -13,27 +11,7 @@ export default function SignupPage() {
   return (
     <>
       <h1 className='text-3xl font-bold text-center mb-8'>Create an account</h1>
-
-      <form className='space-y-4'>
-        <div className='space-y-2'>
-          <Label htmlFor='name'>Full Name</Label>
-          <Input id='name' type='text' required />
-        </div>
-
-        <div className='space-y-2'>
-          <Label htmlFor='email'>Email address</Label>
-          <Input id='email' type='email' required />
-        </div>
-
-        <div className='space-y-2'>
-          <Label htmlFor='password'>Password</Label>
-          <Input id='password' type='password' required />
-        </div>
-
-        <Button className='w-full bg-primary-800 hover:bg-primary-900 text-white'>
-          Continue
-        </Button>
-      </form>
+      <SignUpForm />
 
       <div className='mt-6 text-center text-sm'>
         Already have an account?{' '}
