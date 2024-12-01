@@ -1,7 +1,5 @@
 import Link from 'next/link';
-import { Button } from '@/app/_components/shadcn/button';
-import { Input } from '@/app/_components/shadcn/input';
-import { Label } from '@/app/_components/shadcn/label';
+import LoginForm from '@/app/_components/auth/LoginForm';
 import GoogleButton from '@/app/_components/GoogleButton';
 import MicrosoftButton from '@/app/_components/MicrosoftButton';
 
@@ -13,22 +11,7 @@ export default function LoginPage() {
   return (
     <>
       <h1 className='text-3xl font-bold text-center mb-8'>Welcome back</h1>
-
-      <form className='space-y-4'>
-        <div className='space-y-2'>
-          <Label htmlFor='email'>Email address</Label>
-          <Input id='email' type='email' required />
-        </div>
-
-        <div className='space-y-2'>
-          <Label htmlFor='password'>Password</Label>
-          <Input id='password' type='password' required />
-        </div>
-
-        <Button className='w-full bg-primary-800 hover:bg-primary-900 text-white'>
-          Continue
-        </Button>
-      </form>
+      <LoginForm />
 
       <div className='mt-6 text-center text-sm'>
         Don't have an account?{' '}
