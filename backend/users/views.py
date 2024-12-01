@@ -1,9 +1,8 @@
 import logging
 from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from .models import User
-from .serializers import UserSerializer
 
 
 logger = logging.getLogger(__name__)
@@ -17,7 +16,6 @@ class UserView(APIView):
             full_name = request.data.get("fullName")
             email = request.data.get("email")
             password = request.data.get("password")
-            is_admin = request.data.get("isAdmin")
 
             if not full_name or not email:
                 return Response({"error": "Missing required fields."}, status=400)
@@ -25,11 +23,12 @@ class UserView(APIView):
             if User.objects.filter(email=email).exists():
                 return Response({"error": "This email already exists."}, status=400)
 
+            # Any user who signs up directly through the signup form is automatically an admin user
             user = User.objects.create(
                 full_name=full_name,
                 email=email,
                 password=password,
-                is_admin=is_admin,
+                is_admin=True,
             )
             user.save()
 
