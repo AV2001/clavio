@@ -16,6 +16,11 @@ import ChatbotTraining from '../ChatbotTraining';
 export default async function ChatbotPage({ params }) {
   const { chatbotId } = params;
   const chatbot = await getChatbot(chatbotId);
+  
+  // Generate the appropriate code based on chatbot type
+  const codeToShare = chatbot.chatbotType === 'internal' 
+    ? `${process.env.NEXTAUTH_URL}/chatbots/${chatbotId}/chat`
+    : chatbot.embedCode;
 
   return (
     <>
@@ -34,7 +39,11 @@ export default async function ChatbotPage({ params }) {
                 </p>
               </div>
               <div className='flex gap-3'>
-                <CopyEmbedButton embedCode={chatbot.embedCode} />
+                <CopyEmbedButton 
+                  embedCode={codeToShare}
+                  chatbotType={chatbot.chatbotType}
+                  chatbotId={chatbotId}
+                />
                 <DeleteChatbot chatbotId={chatbotId} />
               </div>
             </div>
@@ -104,9 +113,13 @@ export default async function ChatbotPage({ params }) {
                       {new Date(chatbot.createdAt).toLocaleDateString()}
                     </span>
                   </div>
-                  <div className='flex justify-between items-center'>
+                  <div className='flex justify-between items-center  mb-2'>
                     <span className='text-gray-600'>Organization</span>
                     <span>{chatbot.organization}</span>
+                  </div>
+                  <div className='flex justify-between items-center'>
+                    <span className='text-gray-600'>Type</span>
+                    <span className='capitalize'>{chatbot.chatbotType} Chatbot</span>
                   </div>
                 </div>
               </div>

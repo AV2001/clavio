@@ -38,6 +38,7 @@ class ChatbotDetailSerializer(serializers.ModelSerializer):
             "widgetBorderRadius": instance.widget_border_radius,
             "createdAt": instance.created_at,
             "status": instance.status,
+            "chatbotType": instance.chatbot_type,
         }
 
         return camelcase_representation

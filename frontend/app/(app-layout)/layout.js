@@ -17,7 +17,6 @@ export default async function AppLayout({ children }) {
           <ToastProvider>
             <main className='p-8 rounded-lg bg-primary-100'>{children}</main>
           </ToastProvider>
-          b
         </ReactQueryProvider>
       </div>
     </SessionProvider>
