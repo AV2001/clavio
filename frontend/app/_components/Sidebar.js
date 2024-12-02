@@ -6,26 +6,29 @@ import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Home, Bot, User, Plus } from 'lucide-react';
 
-const navLinks = [
+const adminNavLinks = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
-  {
-    name: 'Create Chatbot',
-    href: '/chatbots/create',
-    icon: Plus,
-  },
+  { name: 'Create Chatbot', href: '/chatbots/create', icon: Plus },
   { name: 'My Chatbots', href: '/chatbots', icon: Bot },
-  { name: 'Account', href: '/account', icon: User },
+  { name: 'Settings', href: '/settings', icon: User },
+];
+
+const userNavLinks = [
+  { name: 'My Chatbots', href: '/chatbots', icon: Bot },
+  { name: 'My Account', href: '/account', icon: User },
 ];
 
 function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const isAdmin = session?.user?.isAdmin;
+  const isAdmin = session?.user?.isAdmin || true;
 
-  console.log('👇👇👇👇👇');
+  const navLinks = isAdmin ? adminNavLinks : userNavLinks;
+
+  console.log('👇');
   console.log('IS THIS USER AN ADMIN?');
   console.log(isAdmin);
-  console.log('👆👆👆👆👆');
+  console.log('👆');
 
   return (
     <nav className='bg-white border-primary-200 row-start-1 row-span-2 shadow-sm flex flex-col gap-8'>
