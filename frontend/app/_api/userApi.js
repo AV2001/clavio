@@ -28,16 +28,21 @@ export async function getUser({ email }) {
   }
 }
 
-export async function createUser({ fullName, email, needsOnboarding }) {
+export async function createUser({ fullName, email, password }) {
   try {
     const response = await axiosInstance.post('/users/', {
       fullName,
       email,
-      needsOnboarding,
+      password,
     });
-    return response.data;
+    return {
+      success: true,
+      message: response.data.message,
+    };
   } catch (error) {
-    console.error('Error creating user:', error);
-    throw error;
+    const errorMessage =
+      error.response?.data?.message ||
+      'Something went wrong. Please try again.';
+    throw new Error(errorMessage);
   }
 }
