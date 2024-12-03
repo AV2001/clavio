@@ -18,31 +18,38 @@ class UserView(APIView):
             password = request.data.get("password")
 
             if not full_name or not email:
-                return Response({"error": "Missing required fields."}, status=400)
+                return Response(
+                    {"success": False, "message": "Missing required fields."},
+                    status=400,
+                )
 
             if User.objects.filter(email=email).exists():
-                return Response({"error": "This email already exists."}, status=400)
+                return Response(
+                    {"success": False, "message": "This email already exists."},
+                    status=400,
+                )
 
-            # Any user who signs up directly through the signup form is automatically an admin user
             user = User.objects.create(
                 full_name=full_name,
                 email=email,
                 password=password,
                 is_admin=True,
             )
+
             user.save()
 
             return Response(
-                {
-                    "message": "User created successfully.",
-                },
+                {"success": True, "message": "Account created successfully."},
                 status=201,
             )
 
         except Exception as e:
             logger.error(f"Error creating user: {str(e)}")
             return Response(
-                {"error": "Your account could not be created. Please try again."},
+                {
+                    "success": False,
+                    "message": "Your account could not be created. Please try again.",
+                },
                 status=500,
             )
 
