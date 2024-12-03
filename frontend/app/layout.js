@@ -2,7 +2,7 @@ import '@/app/_styles/globals.css';
 import { Inter } from 'next/font/google';
 import { auth } from '@/auth';
 import { SessionProvider } from 'next-auth/react';
-import ToastProvider from '@/app/_utils/providers';
+import ToastProvider from '@/app/_utils/providers/ToastProvider';
 
 const inter = Inter({
   subsets: ['latin'],
