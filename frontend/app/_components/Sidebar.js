@@ -21,14 +21,9 @@ const userNavLinks = [
 function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const isAdmin = session?.user?.isAdmin || true;
+  const isAdmin = session?.user?.isAdmin;
 
   const navLinks = isAdmin ? adminNavLinks : userNavLinks;
-
-  console.log('👇');
-  console.log('IS THIS USER AN ADMIN?');
-  console.log(isAdmin);
-  console.log('👆');
 
   return (
     <nav className='bg-white border-primary-200 row-start-1 row-span-2 shadow-sm flex flex-col gap-8'>
