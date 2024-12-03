@@ -15,6 +15,7 @@ export default function SignUpForm() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
+    setError,
   } = useForm();
 
   const onSubmit = async (data) => {
@@ -26,16 +27,14 @@ export default function SignUpForm() {
 
       const result = await signUpAction(formData);
 
-      console.log('👇👇👇👇👇');
-      console.log('This is inside the SignUpForm!');
-      console.log(result);
-      console.log('👆👆👆👆👆');
-
       if (result.success) {
-        toast.success('Account created successfully!');
+        toast.success(result.message);
         router.push('/login');
       } else {
-        toast.error(result.error);
+        setError('email', {
+          type: 'server',
+          message: result.error,
+        });
       }
     } catch (error) {
       toast.error('Something went wrong. Please try again.');
@@ -80,10 +79,10 @@ export default function SignUpForm() {
           type='password'
           {...register('password', {
             required: 'Password is required',
-            // minLength: {
-            //   value: 8,
-            //   message: 'Password must be at least 8 characters',
-            // },
+            minLength: {
+              value: 8,
+              message: 'Password must be at least 8 characters',
+            },
           })}
         />
         {errors.password && (
