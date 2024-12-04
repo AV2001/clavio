@@ -2,7 +2,9 @@ import logging
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from .models import User
+from .utils import send_invite_email
+from .models import User, TeamInvite
+from organizations.models import Organization
 
 
 logger = logging.getLogger(__name__)
@@ -29,14 +31,30 @@ class UserView(APIView):
                     status=400,
                 )
 
-            user = User.objects.create(
-                full_name=full_name,
-                email=email,
-                password=password,
-                is_admin=True,
-            )
+            # Check if the email has a valid invitation
+            invite = TeamInvite.objects.filter(
+                email=email, accepted_invite=False
+            ).first()
 
-            user.save()
+            if invite:
+                # Create non-admin user in the invited organization
+                non_admin_user = User.objects.create(
+                    full_name=full_name,
+                    email=email,
+                    password=password,
+                    is_admin=False,
+                    organization=invite.organization,
+                )
+                non_admin_user.save()
+                # Mark the invitation as accepted
+                invite.accepted_invite = True
+                invite.save()
+            else:
+                # Create admin user
+                admin_user = User.objects.create(
+                    full_name=full_name, email=email, password=password, is_admin=True
+                )
+                admin_user.save()
 
             return Response(
                 {"success": True, "message": "Account created successfully."},
@@ -81,4 +99,69 @@ class UserDetailView(APIView):
 
             return Response(
                 {"error": "User could not be retrieved. Please try again."}, status=500
+            )
+
+
+class InviteTeamMemberView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        try:
+            # if not request.user.is_admin:
+            #     return Response(
+            #         {
+            #             "success": False,
+            #             "message": "You are not authorized to invite team members.",
+            #         },
+            #         status=403,
+            #     )
+
+            email = request.data.get("email")
+            if not email:
+                return Response(
+                    {"success": False, "message": "Email is required."}, status=400
+                )
+
+            # Check if invitation already exists
+            organization = Organization.objects.get(
+                id="4e02db5b-7bc9-4e91-b5d0-e4a97d92b41d"
+            )
+            existing_invite = TeamInvite.objects.filter(
+                email=email, organization=organization, accepted_invite=False
+            ).first()
+
+            if existing_invite:
+                return Response(
+                    {"success": False, "message": "Invitation already sent."},
+                    status=400,
+                )
+
+            # Send invite email
+            send_invite_email(
+                from_email="admin@tryquizr.com",
+                to_email=email,
+                organization_name=organization.name,
+            )
+
+            # Create new invitation
+            user = User.objects.get(email="admin@test.com")
+            invite = TeamInvite.objects.create(
+                email=email,
+                organization=organization,
+                invited_by=user,
+            )
+            invite.save()
+
+            return Response(
+                {"success": True, "message": f"Invitation sent to {email}!"},
+                status=201,
+            )
+        except Exception as e:
+            logger.error(f"Error inviting team member: {str(e)}")
+            return Response(
+                {
+                    "success": False,
+                    "message": "Team member could not be invited. Please try again.",
+                },
+                status=500,
             )
