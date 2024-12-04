@@ -79,6 +79,7 @@ class TeamInvite(models.Model):
         User, on_delete=models.CASCADE, related_name="sent_invites"
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    accepted_invite = models.BooleanField(default=False)
 
     class Meta:
         db_table = "team_invites"
