@@ -41,9 +41,6 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
     }),
   ],
   callbacks: {
-    authorized({ auth, request }) {
-      return !!auth?.user;
-    },
     async jwt({ token, user }) {
       if (user) {
         // Initial sign in - add user data to token
