@@ -21,14 +21,12 @@ export async function createUser({ fullName, email, password }) {
       email,
       password,
     });
-    return {
-      success: true,
-      message: response.data.message,
-    };
+    const { success, message } = response.data;
+    return { success, message };
   } catch (error) {
     const errorMessage =
-      error.response?.data?.message ||
-      'Something went wrong. Please try again.';
+      error.response.data.message ||
+      'An error occurred while creating your account.';
     throw new Error(errorMessage);
   }
 }
