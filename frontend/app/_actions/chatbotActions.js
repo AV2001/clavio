@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import { createChatbot, deleteChatbot } from '@/app/_api/chatbotApi';
+import { createChatbot, deleteChatbot } from '@/app/api/chatbotApi';
 
 export async function createChatbotAction(formData) {
   const trainingMethod = formData.get('trainingMethod');
