@@ -1,9 +1,9 @@
-import { getChatbot } from "@/app/_api/chatbotApi";
-import Heading from "@/app/_components/Heading";
-import ChatInterface from "./ChatInterface";
+import { getChatbot } from '@/app/api/chatbotApi';
+import Heading from '@/app/_components/Heading';
+import ChatInterface from './ChatInterface';
 
 export const metadata = {
-  title: "Chat",
+  title: 'Chat',
 };
 
 export default async function ChatbotChatPage({ params }) {
@@ -14,12 +14,12 @@ export default async function ChatbotChatPage({ params }) {
       <Heading>
         {chatbot.name
           ? chatbot.name
-              .split(" ")
+              .split(' ')
               .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-              .join(" ")
-          : ""}
+              .join(' ')
+          : ''}
       </Heading>
-      <div className="mt-8 h-[calc(100vh-theme(spacing.48))] flex flex-col bg-white rounded-lg border shadow-sm overflow-hidden">
+      <div className='mt-8 h-[calc(100vh-theme(spacing.48))] flex flex-col bg-white rounded-lg border shadow-sm overflow-hidden'>
         <ChatInterface chatbot={chatbot} />
       </div>
     </>

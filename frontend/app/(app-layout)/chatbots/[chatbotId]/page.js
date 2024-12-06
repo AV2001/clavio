@@ -1,6 +1,6 @@
 import ChatbotStatus from '../ChatbotStatus';
 import Heading from '@/app/_components/Heading';
-import { getChatbot } from '@/app/_api/chatbotApi';
+import { getChatbot } from '@/app/api/chatbotApi';
 import { Bot, Settings, BarChart2, RefreshCw, HelpCircle } from 'lucide-react';
 import { Button } from '@/app/_components/shadcn/button';
 import {
@@ -16,11 +16,12 @@ import ChatbotTraining from '../ChatbotTraining';
 export default async function ChatbotPage({ params }) {
   const { chatbotId } = params;
   const chatbot = await getChatbot(chatbotId);
-  
+
   // Generate the appropriate code based on chatbot type
-  const codeToShare = chatbot.chatbotType === 'internal' 
-    ? `${process.env.NEXTAUTH_URL}/chatbots/${chatbotId}/chat`
-    : chatbot.embedCode;
+  const codeToShare =
+    chatbot.chatbotType === 'internal'
+      ? `${process.env.NEXTAUTH_URL}/chatbots/${chatbotId}/chat`
+      : chatbot.embedCode;
 
   return (
     <>
@@ -39,7 +40,7 @@ export default async function ChatbotPage({ params }) {
                 </p>
               </div>
               <div className='flex gap-3'>
-                <CopyEmbedButton 
+                <CopyEmbedButton
                   embedCode={codeToShare}
                   chatbotType={chatbot.chatbotType}
                   chatbotId={chatbotId}
@@ -119,7 +120,9 @@ export default async function ChatbotPage({ params }) {
                   </div>
                   <div className='flex justify-between items-center'>
                     <span className='text-gray-600'>Type</span>
-                    <span className='capitalize'>{chatbot.chatbotType} Chatbot</span>
+                    <span className='capitalize'>
+                      {chatbot.chatbotType} Chatbot
+                    </span>
                   </div>
                 </div>
               </div>
