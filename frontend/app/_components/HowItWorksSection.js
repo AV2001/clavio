@@ -6,34 +6,37 @@ import WordFadeIn from '@/app/_components/shadcn/word-fade-in';
 
 export default function HowItWorksSection() {
   const howItWorksRef = useRef(null);
-  const howItWorksInView = useInView(howItWorksRef, { once: true, amount: 0.2 });
+  const howItWorksInView = useInView(howItWorksRef, {
+    once: true,
+    amount: 0.2,
+  });
 
   return (
     <section id='how-it-works' className='py-20' ref={howItWorksRef}>
       <div className='container'>
         {howItWorksInView && (
           <WordFadeIn
-            words="How It Works"
-            className="font-bold text-center mb-12"
+            words='How It Works'
+            className='font-bold text-center mb-12'
           />
         )}
         <div className='max-w-3xl mx-auto'>
           <ol className='relative border-lborder-muted-foreground/30'>
             <Step number={1} title='Upload Your Data'>
-              Securely upload your company's documents, PDFs, and provide
+              Securely upload your company&apos;s documents, PDFs, and provide
               your website URL to Clavio.
             </Step>
             <Step number={2} title='Train Your Chatbot'>
-              Our AI processes your data and learns to understand your
-              business context.
+              Our AI processes your data and learns to understand your business
+              context.
             </Step>
             <Step number={3} title='Customize & Deploy'>
-              Tailor your chatbot's appearance and behavior, then deploy it
+              Tailor your chatbot&apos;s appearance and behavior, then deploy it
               to your chosen platforms.
             </Step>
             <Step number={4} title='Engage & Improve'>
               Start engaging with users while continuously improving your
-              chatbot's performance.
+              chatbot&apos;s performance.
             </Step>
           </ol>
         </div>

@@ -14,7 +14,7 @@ export default function LoginPage() {
       <LoginForm />
 
       <div className='mt-6 text-center text-sm'>
-        Don't have an account?{' '}
+        Don&apos;t have an account?{' '}
         <Link
           href='/signup'
           className='text-primary-500 hover:text-primary-600'
