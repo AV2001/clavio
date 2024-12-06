@@ -6,22 +6,20 @@ export const metadata = {
   title: 'Chat',
 };
 
-export default async function ChatbotChatPage({ params }) {
+export default async function ChatPage({ params }) {
   const chatbot = await getChatbot(params.chatbotId);
 
   return (
-    <>
-      <Heading>
+    <div className='h-[calc(100vh-theme(spacing.32))]'>
+      <Heading className='mb-4'>
         {chatbot.name
-          ? chatbot.name
-              .split(' ')
-              .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-              .join(' ')
-          : ''}
+          .split(' ')
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ')}
       </Heading>
-      <div className='mt-8 h-[calc(100vh-theme(spacing.48))] flex flex-col bg-white rounded-lg border shadow-sm overflow-hidden'>
+      <div className='h-full bg-white rounded-lg border shadow-sm overflow-hidden'>
         <ChatInterface chatbot={chatbot} />
       </div>
-    </>
+    </div>
   );
 }
