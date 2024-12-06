@@ -1,13 +1,28 @@
 'use client';
 
 import { useState } from 'react';
+import { inviteTeamMemberAction } from '@/app/_actions/teamActions';
+import { toast } from 'react-toastify';
+import Loader from '@/app/_components/Loader';
+import { useGetUsers } from '@/app/_hooks/useGetUsers';
 
 export default function TeamsTab() {
   const [email, setEmail] = useState('');
+  const { users, isLoadingUsers } = useGetUsers();
 
   const handleEmailChange = (e) => {
     setEmail(e.target.value);
   };
+
+  async function handleInvite() {
+    const result = await inviteTeamMemberAction(email);
+    if (result.success) {
+      toast.success(result.message);
+      setEmail('');
+    } else {
+      toast.error(result.error);
+    }
+  }
 
   return (
     <div className='space-y-8'>
@@ -17,7 +32,7 @@ export default function TeamsTab() {
           <div>
             <label
               htmlFor='email'
-              className='block text-sm text-muted-foreground mb-2'
+              className='block text-sm font-medium text-gray-700 mb-2'
             >
               Email address
             </label>
@@ -38,6 +53,7 @@ export default function TeamsTab() {
                   : 'bg-muted text-muted-foreground cursor-not-allowed'
               }`}
               disabled={!email}
+              onClick={handleInvite}
             >
               Invite
             </button>
@@ -48,43 +64,43 @@ export default function TeamsTab() {
       <div className='bg-background rounded-lg border border-border p-6'>
         <div className='flex justify-between items-center mb-6'>
           <h2 className='text-xl font-semibold'>Members</h2>
-          <div className='text-sm text-muted-foreground'>Enabled MFA</div>
         </div>
-        <div className='space-y-4'>
-          <div className='flex items-center justify-between py-3'>
-            <div>
-              <p className='text-foreground'>anirudhvadlamani2001@gmail.com</p>
-              <p className='text-sm text-muted-foreground'>
-                Joined on Dec 03, 2024
-              </p>
-            </div>
-            <div className='flex items-center gap-4'>
-              <span className='text-sm bg-primary/10 text-primary px-3 py-1 rounded'>
-                Admin
-              </span>
-              <button className='text-sm text-destructive hover:text-destructive/80'>
-                ×
-              </button>
-            </div>
+        {isLoadingUsers ? (
+          <div className='flex justify-center py-8'>
+            <Loader />
           </div>
-
-          <div className='flex items-center justify-between py-3'>
-            <div>
-              <p className='text-foreground'>steve.wozniak@example.com</p>
-              <p className='text-sm text-muted-foreground'>
-                Joined on Dec 05, 2024
-              </p>
-            </div>
-            <div className='flex items-center gap-4'>
-              <span className='text-sm bg-secondary/10 text-secondary-foreground px-3 py-1 rounded'>
-                Member
-              </span>
-              <button className='text-sm text-destructive hover:text-destructive/80'>
-                ×
-              </button>
-            </div>
+        ) : (
+          <div className='space-y-4'>
+            {users?.map((user) => (
+              <div
+                key={user.email}
+                className='flex items-center justify-between py-3'
+              >
+                <div>
+                  <p className='text-foreground font-medium'>{user.fullName}</p>
+                  <p className='text-sm text-muted-foreground'>{user.email}</p>
+                  <p className='text-sm text-muted-foreground'>
+                    Joined on {new Date(user.joinedAt).toLocaleDateString()}
+                  </p>
+                </div>
+                <div className='flex items-center gap-4'>
+                  <span
+                    className={`text-sm px-3 py-1 rounded ${
+                      user.isAdmin
+                        ? 'bg-primary/10 text-primary'
+                        : 'bg-secondary/10 text-secondary-foreground'
+                    }`}
+                  >
+                    {user.isAdmin ? 'Admin' : 'Member'}
+                  </span>
+                  <button className='text-sm text-destructive hover:text-destructive/80'>
+                    ×
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
+        )}
       </div>
 
       <div className='bg-background rounded-lg border border-border p-6'>
