@@ -1,6 +1,18 @@
 import axiosInstance from './axiosInstance';
 
 // Used for authenticated requests
+export async function getUsers() {
+  try {
+    const response = await axiosInstance.get('/users/');
+    const { success, message, data: users } = response.data;
+    return { success, message, users };
+  } catch (error) {
+    const errorMessage =
+      error.response.data.message || 'An error occurred while fetching users.';
+    throw new Error(errorMessage);
+  }
+}
+
 export async function getUser({ email }) {
   try {
     const response = await axiosInstance.get(`/users/get/?email=${email}`);
