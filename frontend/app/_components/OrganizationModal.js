@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Modal from './Modal';
 import { Input } from './shadcn/input';
 import { Button } from './shadcn/button';
-import { createOrganization } from '@/app/_api/organizationApi';
+import { createOrganization } from '@/app/api/organizationApi';
 
 export default function OrganizationModal({ isOpen }) {
   const [organizationName, setOrganizationName] = useState('');
