@@ -1,6 +1,6 @@
 'use server';
 
-import { createOrganization } from '@/_api/organizationApi';
+import { createOrganization } from '@/api/organizationApi';
 import { revalidatePath } from 'next/cache';
 
 export async function createOrganizationAction(formData) {
