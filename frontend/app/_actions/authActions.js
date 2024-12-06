@@ -1,19 +1,24 @@
 'use server';
 
 import { signIn } from '@/auth';
-import { createUser } from '@/app/_api/userApi';
-import { redirect } from 'next/navigation';
+import { createUser } from '@/app/api/userApi';
 
 export async function signUpAction(formData) {
   try {
-    // Create the user first
-    await createUser({
+    const result = await createUser({
       fullName: formData.get('fullName'),
       email: formData.get('email'),
       password: formData.get('password'),
     });
+    return {
+      success: result.success,
+      message: result.message,
+    };
   } catch (error) {
-    throw new Error(error);
+    return {
+      success: false,
+      error: error.message,
+    };
   }
 }
 
