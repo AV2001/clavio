@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from .utils import send_invite_email
 from .models import User, TeamInvite
 from organizations.models import Organization
+from .serializers import UserSerializer
 
 
 logger = logging.getLogger(__name__)
@@ -13,11 +14,28 @@ logger = logging.getLogger(__name__)
 class UserView(APIView):
     permission_classes = [AllowAny]
 
+    def get(self, request):
+        try:
+            users = User.objects.filter(organization=request.user.organization)
+            serializer = UserSerializer(users, many=True)
+            return Response({"success": True, "data": serializer.data}, status=200)
+        except Exception as e:
+            logger.error(f"Error getting users: {str(e)}")
+            return Response(
+                {
+                    "success": False,
+                    "message": "Users could not be retrieved. Please try again.",
+                },
+                status=500,
+            )
+
     def post(self, request):
         try:
             full_name = request.data.get("fullName")
             email = request.data.get("email")
             password = request.data.get("password")
+            is_invite = request.data.get("isInvite") == "true"
+            organization_name = request.data.get("organizationName")
 
             if not full_name or not email:
                 return Response(
@@ -31,12 +49,21 @@ class UserView(APIView):
                     status=400,
                 )
 
-            # Check if the email has a valid invitation
-            invite = TeamInvite.objects.filter(
-                email=email, accepted_invite=False
-            ).first()
+            # If user is trying to sign up through an invitation link
+            if is_invite:
+                invite = TeamInvite.objects.filter(
+                    email=email, accepted_invite=False
+                ).first()
 
-            if invite:
+                if not invite:
+                    return Response(
+                        {
+                            "success": False,
+                            "message": "No invitation found for this email. Please check with your organization administrator.",
+                        },
+                        status=400,
+                    )
+
                 # Create non-admin user in the invited organization
                 non_admin_user = User.objects.create(
                     full_name=full_name,
@@ -46,13 +73,39 @@ class UserView(APIView):
                     organization=invite.organization,
                 )
                 non_admin_user.save()
+
                 # Mark the invitation as accepted
                 invite.accepted_invite = True
                 invite.save()
+
             else:
-                # Create admin user
+                # For admin signup, organization name is required
+                if not organization_name:
+                    return Response(
+                        {"success": False, "message": "Organization name is required."},
+                        status=400,
+                    )
+
+                # Check if organization name already exists
+                if Organization.objects.filter(name=organization_name).exists():
+                    return Response(
+                        {
+                            "success": False,
+                            "message": "An organization with this name already exists.",
+                        },
+                        status=400,
+                    )
+
+                # Create organization first
+                organization = Organization.objects.create(name=organization_name)
+                organization.save()
+                # Create admin user with organization
                 admin_user = User.objects.create(
-                    full_name=full_name, email=email, password=password, is_admin=True
+                    full_name=full_name,
+                    email=email,
+                    password=password,
+                    is_admin=True,
+                    organization=organization,
                 )
                 admin_user.save()
 
@@ -87,7 +140,6 @@ class UserDetailView(APIView):
                 "email": user.email,
                 "id": user.id,
                 "name": user.full_name,
-                "needsOnboarding": user.needs_onboarding,
             }
 
             return Response(
@@ -107,14 +159,14 @@ class InviteTeamMemberView(APIView):
 
     def post(self, request):
         try:
-            # if not request.user.is_admin:
-            #     return Response(
-            #         {
-            #             "success": False,
-            #             "message": "You are not authorized to invite team members.",
-            #         },
-            #         status=403,
-            #     )
+            if not request.user.is_admin:
+                return Response(
+                    {
+                        "success": False,
+                        "message": "You are not authorized to invite team members.",
+                    },
+                    status=403,
+                )
 
             email = request.data.get("email")
             if not email:
@@ -123,9 +175,7 @@ class InviteTeamMemberView(APIView):
                 )
 
             # Check if invitation already exists
-            organization = Organization.objects.get(
-                id="4e02db5b-7bc9-4e91-b5d0-e4a97d92b41d"
-            )
+            organization = Organization.objects.get(id=request.user.organization.id)
             existing_invite = TeamInvite.objects.filter(
                 email=email, organization=organization, accepted_invite=False
             ).first()
@@ -144,7 +194,7 @@ class InviteTeamMemberView(APIView):
             )
 
             # Create new invitation
-            user = User.objects.get(email="admin@test.com")
+            user = User.objects.get(email=request.user.email)
             invite = TeamInvite.objects.create(
                 email=email,
                 organization=organization,
