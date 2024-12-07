@@ -5,9 +5,13 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import AllowAny
+from rest_framework_simplejwt.views import TokenRefreshView
+from rest_framework_simplejwt.exceptions import TokenError
+import logging
 
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 def get_tokens_for_user(user):
@@ -44,7 +48,7 @@ class LoginView(APIView):
 
         return Response(
             {
-                "message": "Login successful",
+                "message": "Login successful!",
                 "tokens": {
                     **tokens,
                     "csrf": csrf_token,
@@ -55,3 +59,57 @@ class LoginView(APIView):
                 "isAdmin": user.is_admin,
             }
         )
+
+
+class CustomTokenRefreshView(TokenRefreshView):
+    def post(self, request, *args, **kwargs):
+        try:
+            # Validate content type
+            if (
+                not request.content_type
+                or "application/json" not in request.content_type.lower()
+            ):
+                return Response(
+                    {"error": "Invalid content type. Expected application/json"},
+                    status=400,
+                )
+
+            refresh = request.data.get("refresh")
+            if not refresh:
+                return Response(
+                    {"error": "No refresh token provided"},
+                    status=400,
+                )
+
+            # Enhanced error handling
+            serializer = self.get_serializer(data=request.data)
+
+            try:
+                serializer.is_valid(raise_exception=True)
+            except TokenError as e:
+                logger.warning(f"Token refresh failed: {str(e)}")
+                return Response(
+                    {
+                        "error": "Token refresh failed. Please login again.",
+                        "code": "token_refresh_failed",
+                    },
+                    status=401,
+                )
+
+            validated_data = serializer.validated_data
+
+            logger.info("Token refresh successful")
+            return Response(
+                {
+                    "access": validated_data["access"],
+                    "refresh": validated_data["refresh"],
+                },
+                status=200,
+            )
+
+        except Exception as e:
+            logger.error(f"Unexpected token refresh error: {str(e)}")
+            return Response(
+                {"error": "An unexpected error occurred", "code": "unexpected_error"},
+                status=500,
+            )
