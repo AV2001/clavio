@@ -1,9 +1,9 @@
 import logging
 from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from .utils import send_invite_email
-from .models import User, TeamInvite
+from .models import User
 from organizations.models import Organization
 from .serializers import UserSerializer
 
@@ -13,18 +13,26 @@ logger = logging.getLogger(__name__)
 
 class UserView(APIView):
     permission_classes = [AllowAny]
+    # permission_classes = [IsAuthenticated]
 
     def get(self, request):
         try:
             users = User.objects.filter(organization=request.user.organization)
             serializer = UserSerializer(users, many=True)
-            return Response({"success": True, "data": serializer.data}, status=200)
+            return Response(
+                {
+                    "success": True,
+                    "users": serializer.data,
+                    "message": "Users fetched successfully!",
+                },
+                status=200,
+            )
         except Exception as e:
             logger.error(f"Error getting users: {str(e)}")
             return Response(
                 {
                     "success": False,
-                    "message": "Users could not be retrieved. Please try again.",
+                    "message": "Could not fetch users. Please try again.",
                 },
                 status=500,
             )
@@ -51,9 +59,7 @@ class UserView(APIView):
 
             # If user is trying to sign up through an invitation link
             if is_invite:
-                invite = TeamInvite.objects.filter(
-                    email=email, accepted_invite=False
-                ).first()
+                invite = User.objects.filter(email=email, accepted_invite=False).first()
 
                 if not invite:
                     return Response(
@@ -108,7 +114,6 @@ class UserView(APIView):
                     organization=organization,
                 )
                 admin_user.save()
-
             return Response(
                 {"success": True, "message": "Account created successfully."},
                 status=201,
@@ -155,7 +160,7 @@ class UserDetailView(APIView):
 
 
 class InviteTeamMemberView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         try:
@@ -176,7 +181,7 @@ class InviteTeamMemberView(APIView):
 
             # Check if invitation already exists
             organization = Organization.objects.get(id=request.user.organization.id)
-            existing_invite = TeamInvite.objects.filter(
+            existing_invite = User.objects.filter(
                 email=email, organization=organization, accepted_invite=False
             ).first()
 
@@ -194,11 +199,10 @@ class InviteTeamMemberView(APIView):
             )
 
             # Create new invitation
-            user = User.objects.get(email=request.user.email)
-            invite = TeamInvite.objects.create(
+            invite = User.objects.create(
                 email=email,
                 organization=organization,
-                invited_by=user,
+                accepted_invite=False,
             )
             invite.save()
 
