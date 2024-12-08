@@ -131,31 +131,30 @@ class UserView(APIView):
 
 
 class UserDetailView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
-    def get(self, request):
+    def delete(self, request, user_id):
         try:
-            email = request.query_params.get("email")
-            user = User.objects.get(email=email)
-
-            if not user:
-                return Response({"error": "User not found."}, status=404)
-
-            user_data = {
-                "email": user.email,
-                "id": user.id,
-                "name": user.full_name,
-            }
-
+            organization = Organization.objects.get(id=request.user.organization.id)
+            user = User.objects.get(id=user_id, organization=organization)
+            user.delete()
             return Response(
-                {"data": user_data},
+                {"success": True, "message": "User deleted successfully."},
                 status=200,
             )
-        except Exception as e:
-            logger.error(f"Error getting user: {str(e)}")
-
+        except User.DoesNotExist:
             return Response(
-                {"error": "User could not be retrieved. Please try again."}, status=500
+                {"success": False, "message": "User not found."},
+                status=404,
+            )
+        except Exception as e:
+            logger.error(f"Error deleting user: {str(e)}")
+            return Response(
+                {
+                    "success": False,
+                    "message": "User could not be deleted. Please try again.",
+                },
+                status=500,
             )
 
 
