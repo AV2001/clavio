@@ -37,6 +37,7 @@ class User(AbstractBaseUser):
     password = models.CharField(max_length=255, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     is_admin = models.BooleanField(default=False)
+    accepted_invite = models.BooleanField(default=False)
     organization = models.ForeignKey(
         Organization,
         on_delete=models.CASCADE,
