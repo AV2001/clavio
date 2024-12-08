@@ -1,15 +1,16 @@
 'use server';
 
-import { inviteTeamMember } from '@/app/api/teamApi';
+import axiosInstance from '@/app/api/axiosInstance';
 
 export async function inviteTeamMemberAction(email) {
   try {
-    const result = await inviteTeamMember({ email });
-    return { success: result.success, message: result.message };
+    const response = await axiosInstance.post('/users/invite/', { email });
+    const { success, message } = response.data;
+    return { success, message };
   } catch (error) {
-    return {
-      success: false,
-      error: error.message,
-    };
+    throw new Error(
+      error.response?.data?.message ??
+        'Unable to connect to the server. Please try again later.'
+    );
   }
 }
