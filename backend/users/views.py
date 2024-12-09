@@ -2,6 +2,7 @@ import logging
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from uuid import uuid4
 from .utils import send_invite_email
 from .models import User
 from organizations.models import Organization
@@ -44,6 +45,7 @@ class UserView(APIView):
             password = request.data.get("password")
             is_invite = request.data.get("isInvite") == "true"
             organization_name = request.data.get("organizationName")
+            invite_token = request.data.get("inviteToken")
 
             if not full_name or not email:
                 return Response(
@@ -51,48 +53,59 @@ class UserView(APIView):
                     status=400,
                 )
 
-            if User.objects.filter(email=email).exists():
-                return Response(
-                    {"success": False, "message": "This email already exists."},
-                    status=400,
-                )
-
-            # If user is trying to sign up through an invitation link
+            # For invite flow, check if there's a valid invitation
             if is_invite:
-                invite = User.objects.filter(email=email, accepted_invite=False).first()
+                try:
+                    invited_user = User.objects.get(
+                        email=email, accepted_invite=False, invite_token__isnull=False
+                    )
 
-                if not invite:
+                    # Verify the invite token matches
+                    if str(invited_user.invite_token) != invite_token:
+                        return Response(
+                            {
+                                "success": False,
+                                "message": "Invalid invitation token for this email address.",
+                            },
+                            status=400,
+                        )
+
+                    # Check if user already exists with accepted invite
+                    if User.objects.filter(email=email, accepted_invite=True).exists():
+                        return Response(
+                            {
+                                "success": False,
+                                "message": "This email is already associated with an account.",
+                            },
+                            status=400,
+                        )
+
+                except User.DoesNotExist:
                     return Response(
                         {
                             "success": False,
-                            "message": "No invitation found for this email. Please check with your organization administrator.",
+                            "message": "No valid invitation found for this email address.",
                         },
                         status=400,
                     )
 
-                # Create non-admin user in the invited organization
-                non_admin_user = User.objects.create(
-                    full_name=full_name,
-                    email=email,
-                    password=password,
-                    is_admin=False,
-                    organization=invite.organization,
+            if User.objects.filter(email=email, accepted_invite=True).exists():
+                return Response(
+                    {
+                        "success": False,
+                        "message": "This email is already in use.",
+                    },
+                    status=400,
                 )
-                non_admin_user.save()
 
-                # Mark the invitation as accepted
-                invite.accepted_invite = True
-                invite.save()
-
-            else:
-                # For admin signup, organization name is required
+            # For admin signup (non-invite flow)
+            if not is_invite:
                 if not organization_name:
                     return Response(
                         {"success": False, "message": "Organization name is required."},
                         status=400,
                     )
 
-                # Check if organization name already exists
                 if Organization.objects.filter(name=organization_name).exists():
                     return Response(
                         {
@@ -102,10 +115,9 @@ class UserView(APIView):
                         status=400,
                     )
 
-                # Create organization first
                 organization = Organization.objects.create(name=organization_name)
                 organization.save()
-                # Create admin user with organization
+
                 admin_user = User.objects.create(
                     full_name=full_name,
                     email=email,
@@ -114,6 +126,14 @@ class UserView(APIView):
                     organization=organization,
                 )
                 admin_user.save()
+            else:
+                # Update the existing invited user
+                invited_user.full_name = full_name
+                invited_user.password = password
+                invited_user.accepted_invite = True
+                invited_user.invite_token = None
+                invited_user.save()
+
             return Response(
                 {"success": True, "message": "Account created successfully."},
                 status=201,
@@ -163,58 +183,69 @@ class InviteTeamMemberView(APIView):
 
     def post(self, request):
         try:
-            if not request.user.is_admin:
-                return Response(
-                    {
-                        "success": False,
-                        "message": "You are not authorized to invite team members.",
-                    },
-                    status=403,
-                )
-
             email = request.data.get("email")
             if not email:
                 return Response(
                     {"success": False, "message": "Email is required."}, status=400
                 )
 
-            # Check if invitation already exists
-            organization = Organization.objects.get(id=request.user.organization.id)
-            existing_invite = User.objects.filter(
-                email=email, organization=organization, accepted_invite=False
-            ).first()
-
-            if existing_invite:
+            # Check if user already exists and has accepted an invite
+            if User.objects.filter(email=email, accepted_invite=True).exists():
                 return Response(
-                    {"success": False, "message": "Invitation already sent."},
+                    {
+                        "success": False,
+                        "message": "This user is already a member of an organization.",
+                    },
                     status=400,
                 )
 
+            # Check if there's a pending invite for this email
+            existing_user = User.objects.filter(
+                email=email, accepted_invite=False
+            ).first()
+
+            if existing_user:
+                return Response(
+                    {
+                        "success": False,
+                        "message": "An invitation is already pending for this email.",
+                    },
+                    status=400,
+                )
+
+            # Generate invite token
+            invite_token = uuid4()
+
+            # Create new user with pending invite
+            new_user = User.objects.create(
+                email=email,
+                organization=request.user.organization,
+                invite_token=invite_token,
+                accepted_invite=False,
+                is_admin=False,
+            )
+
+            new_user.save()
+
             # Send invite email
             send_invite_email(
-                from_email="admin@tryquizr.com",
+                from_email="noreply@tryquizr.com",
                 to_email=email,
-                organization_name=organization.name,
+                organization_name=request.user.organization.name,
+                invite_token=invite_token,
             )
-
-            # Create new invitation
-            invite = User.objects.create(
-                email=email,
-                organization=organization,
-                accepted_invite=False,
-            )
-            invite.save()
 
             return Response(
-                {"success": True, "message": f"Invitation sent to {email}!"},
-                status=201,
+                {"success": True, "message": "Invitation sent successfully."},
+                status=200,
             )
+
         except Exception as e:
             logger.error(f"Error inviting team member: {str(e)}")
             return Response(
                 {
                     "success": False,
-                    "message": "Team member could not be invited. Please try again.",
+                    "message": "Failed to send invitation. Please try again.",
                 },
                 status=500,
             )
