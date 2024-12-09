@@ -1,12 +1,11 @@
 import logging
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
 from django.http import HttpResponse
-from organizations.models import Organization
 from .serializers import ChatbotListSerializer, ChatbotDetailSerializer
 from .models import Chatbot
 from .tasks import train_chatbot_task
@@ -17,20 +16,27 @@ logger = logging.getLogger(__name__)
 
 
 class ChatbotView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         try:
-            chatbots = Chatbot.objects.filter(
-                organization="4e02db5b-7bc9-4e91-b5d0-e4a97d92b41d"
-            )
+            # chatbots = Chatbot.objects.filter(non_existent_field=True)
+            chatbots = Chatbot.objects.filter(organization=request.user.organization)
             serializer = ChatbotListSerializer(chatbots, many=True)
-            return Response(serializer.data, status=200)
+            return Response(
+                {
+                    "success": True,
+                    "chatbots": serializer.data,
+                    "message": "Chatbots fetched successfully",
+                },
+                status=200,
+            )
         except Exception as e:
             logger.error(f"Error fetching chatbots: {str(e)}")
             return Response(
                 {
-                    "error": "There was an error fetching the chatbots. Please try again later."
+                    "success": False,
+                    "message": "Unable to fetch chatbots. Please try again.",
                 },
                 status=500,
             )
@@ -40,9 +46,7 @@ class ChatbotView(APIView):
             with transaction.atomic():
                 # Create chatbot object
                 chatbot = Chatbot.objects.create(
-                    organization=Organization.objects.get(
-                        id="4e02db5b-7bc9-4e91-b5d0-e4a97d92b41d"
-                    ),
+                    organization=request.user.organization,
                     name=request.data.get("chatbotName"),
                     initial_message=request.data.get("initialMessage"),
                     primary_color=request.data.get("primaryColor"),
@@ -61,8 +65,6 @@ class ChatbotView(APIView):
 
                 if training_method == "files":
                     files = request.FILES.getlist("files")
-                    print("👇👇👇👇👇")
-                    print(f"Number of files: {len(files)}")
                     file_contents = []
                     for file in files:
                         # Read as bytes and encode to base64 for safe serialization
@@ -150,7 +152,7 @@ class ChatbotEmbedScriptView(APIView):
 
 
 class ChatbotDetailView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, chatbot_id):
         try:
