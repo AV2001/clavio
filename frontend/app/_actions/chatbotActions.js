@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createChatbot, deleteChatbot } from '@/app/api/chatbotApi';
+import axiosInstance from '@/app/api/axiosInstance';
 
 export async function createChatbotAction(formData) {
   const trainingMethod = formData.get('trainingMethod');
@@ -41,4 +42,17 @@ export async function deleteChatbotAction(chatbotId) {
   await deleteChatbot(chatbotId);
   revalidatePath('/chatbots');
   return { success: true };
+}
+
+export async function getChatbotsAction() {
+  try {
+    const response = await axiosInstance.get('/chatbots/');
+    const { chatbots } = response.data;
+    return chatbots;
+  } catch (error) {
+    throw new Error(
+      error.response?.data?.message ??
+        'Unable to fetch chatbots. Please try again later.'
+    );
+  }
 }
