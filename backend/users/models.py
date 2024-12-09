@@ -55,7 +55,7 @@ class User(AbstractBaseUser):
         db_table = "organization_employees"
 
     def save(self, *args, **kwargs):
-        if self._state.adding or self._password_has_changed():
+        if self.password and (self._state.adding or self._password_has_changed()):
             self.password = make_password(self.password)
         super().save(*args, **kwargs)
 
