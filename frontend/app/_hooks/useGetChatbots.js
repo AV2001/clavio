@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { getChatbots } from '@/app/_actions/chatbotActions';
+import { getChatbotsAction } from '@/app/_actions/chatbotActions';
 
 export function useGetChatbots({ initialData } = {}) {
   const {
@@ -10,7 +10,7 @@ export function useGetChatbots({ initialData } = {}) {
     error,
   } = useQuery({
     queryKey: ['chatbots'],
-    queryFn: async () => await getChatbots(),
+    queryFn: async () => await getChatbotsAction(),
     initialData,
     staleTime: 0,
     refetchOnMount: false,
