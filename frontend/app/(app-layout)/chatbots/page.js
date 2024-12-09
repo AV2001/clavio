@@ -1,7 +1,7 @@
 import ChatbotList from './ChatbotList';
 import Link from 'next/link';
 import Heading from '@/app/_components/Heading';
-import { getChatbots } from '@/app/api/chatbotApi';
+import { getChatbotsAction } from '@/app/_actions/chatbotActions';
 import { auth } from '@/auth';
 
 export const metadata = {
@@ -11,13 +11,13 @@ export const metadata = {
 export default async function MyChatbots() {
   const session = await auth();
   const isAdmin = session?.user?.isAdmin;
-  const chatbots = await getChatbots();
+  const initialChatbots = await getChatbotsAction();
 
   return (
     <>
       <Heading>My Chatbots</Heading>
-      {chatbots.length > 0 ? (
-        <ChatbotList chatbots={chatbots} />
+      {initialChatbots.length > 0 ? (
+        <ChatbotList initialChatbots={initialChatbots} isAdmin={isAdmin} />
       ) : isAdmin ? (
         <p>
           You have not created any chatbots yet. Please do so{' '}
