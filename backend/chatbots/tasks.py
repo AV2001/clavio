@@ -13,21 +13,20 @@ logger = logging.getLogger(__name__)
 def train_chatbot_task(
     self, chatbot_id, training_method, file_contents=None, urls=None
 ):
-    channel_layer = get_channel_layer()
-
-    def send_progress(message):
-        async_to_sync(channel_layer.group_send)(
-            f"chatbot_{chatbot_id}",
-            {
-                "type": "chatbot_status",
-                "message": {
-                    "status": "training",
-                    "message": message,
-                },
-            },
-        )
-
     try:
+        channel_layer = get_channel_layer()
+
+        def send_progress(message):
+            async_to_sync(channel_layer.group_send)(
+                f"chatbot_{chatbot_id}",
+                {
+                    "message": {
+                        "status": "training",
+                        "message": message,
+                    },
+                },
+            )
+
         send_progress("Initializing training job")
 
         chatbot = Chatbot.objects.get(id=chatbot_id)
@@ -59,20 +58,5 @@ def train_chatbot_task(
             raise Exception(response["message"])
 
     except Exception as e:
-        logger.error(f"Training failed for chatbot {chatbot_id}: {str(e)}")
-        chatbot = Chatbot.objects.get(id=chatbot_id)
-        chatbot.status = "failed"
-        chatbot.save()
-
-        async_to_sync(channel_layer.group_send)(
-            f"chatbot_{chatbot_id}",
-            {
-                "type": "chatbot_status",
-                "message": {
-                    "status": "failed",
-                    "message": "Training failed!",
-                },
-            },
-        )
-
+        logger.error(f"Training failed for chatbot {chatbot_id}")
         raise self.retry(exc=e, countdown=2**self.request.retries)
