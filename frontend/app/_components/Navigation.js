@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { Button } from '@/app/_components/shadcn/button';
 import { Menu, X } from 'lucide-react';
@@ -9,11 +8,10 @@ import CTAButton from '@/app/_components/CTAButton';
 import { motion, AnimatePresence } from 'framer-motion';
 import Logo from '@/app/_components/Logo';
 
-export default function Navigation() {
+export default function Navigation({ session }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { data: session } = useSession();
-  const user = session?.user;
-  const isAdmin = user?.isAdmin;
+  const isAdmin = session?.user?.isAdmin;
+  const dashboardLink = isAdmin ? '/dashboard' : '/chatbots';
 
   useEffect(() => {
     const handleSmoothScroll = (e) => {
@@ -67,7 +65,13 @@ export default function Navigation() {
           </Link>
         </nav>
         <div className='hidden md:flex items-center space-x-4'>
-          {!user ? (
+          {session ? (
+            <CTAButton>
+              <Link href={dashboardLink} className='text-sm font-medium'>
+                Dashboard
+              </Link>
+            </CTAButton>
+          ) : (
             <>
               <Link
                 href='/login'
@@ -81,15 +85,6 @@ export default function Navigation() {
                 </Link>
               </CTAButton>
             </>
-          ) : (
-            <CTAButton>
-              <Link
-                href={isAdmin ? '/dashboard' : '/chatbots'}
-                className='text-sm font-medium'
-              >
-                {isAdmin ? 'Admin' : 'Dashboard'}
-              </Link>
-            </CTAButton>
           )}
         </div>
         <Button
