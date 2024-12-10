@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { getAuthInfo } from '@/app/_lib/getAuthInfo';
 import Navigation from '@/app/_components/Navigation';
 import CTAButton from '@/app/_components/CTAButton';
 import { Button } from '@/app/_components/shadcn/button';
@@ -10,10 +11,12 @@ import HowItWorksSection from '@/app/_components/HowItWorksSection';
 import PricingSection from '@/app/_components/PricingSection';
 import FAQSection from './_components/FAQSection';
 
-export default function Home() {
+export default async function Home() {
+  const session = await getAuthInfo();
+
   return (
     <>
-      <Navigation />
+      <Navigation session={session} />
       <main className='flex-grow px-6 mx-auto max-w-7xl'>
         <section className='py-20 md:py-32'>
           <div className='container'>
