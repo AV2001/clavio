@@ -1,5 +1,6 @@
 'use client';
 
+import { useSearchParams } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/app/_components/shadcn/button';
@@ -11,11 +12,13 @@ import MiniLoader from '@/app/_components/MiniLoader';
 
 export default function SignUpForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isInvite = searchParams.get('type') === 'invite';
+  const inviteToken = searchParams.get('token');
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
-    setError,
+    formState: { isSubmitting },
   } = useForm();
 
   const onSubmit = async (data) => {
@@ -24,6 +27,12 @@ export default function SignUpForm() {
       formData.append('fullName', data.fullName);
       formData.append('email', data.email);
       formData.append('password', data.password);
+      formData.append('isInvite', isInvite);
+      formData.append('organizationName', data.organizationName);
+
+      if (isInvite && inviteToken) {
+        formData.append('inviteToken', inviteToken);
+      }
 
       const result = await signUpAction(formData);
 
@@ -31,13 +40,10 @@ export default function SignUpForm() {
         toast.success(result.message);
         router.push('/login');
       } else {
-        setError('email', {
-          type: 'server',
-          message: result.error,
-        });
+        toast.error(result.error);
       }
     } catch (error) {
-      toast.error('Something went wrong. Please try again.');
+      toast.error(error.message);
     }
   };
 
@@ -49,9 +55,6 @@ export default function SignUpForm() {
           id='fullName'
           {...register('fullName', { required: 'Full name is required' })}
         />
-        {errors.fullName && (
-          <p className='text-sm text-red-500'>{errors.fullName.message}</p>
-        )}
       </div>
 
       <div className='space-y-2'>
@@ -59,35 +62,29 @@ export default function SignUpForm() {
         <Input
           id='email'
           type='email'
-          {...register('email', {
-            required: 'Email is required',
-            pattern: {
-              value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-              message: 'Invalid email address',
-            },
-          })}
+          {...register('email', { required: 'Email is required' })}
         />
-        {errors.email && (
-          <p className='text-sm text-red-500'>{errors.email.message}</p>
-        )}
       </div>
+
+      {!isInvite && (
+        <div className='space-y-2'>
+          <Label htmlFor='organizationName'>Organization Name</Label>
+          <Input
+            id='organizationName'
+            {...register('organizationName', {
+              required: 'Organization name is required',
+            })}
+          />
+        </div>
+      )}
 
       <div className='space-y-2'>
         <Label htmlFor='password'>Password</Label>
         <Input
           id='password'
           type='password'
-          {...register('password', {
-            required: 'Password is required',
-            minLength: {
-              value: 8,
-              message: 'Password must be at least 8 characters',
-            },
-          })}
+          {...register('password', { required: 'Password is required' })}
         />
-        {errors.password && (
-          <p className='text-sm text-red-500'>{errors.password.message}</p>
-        )}
       </div>
 
       <Button
@@ -95,7 +92,7 @@ export default function SignUpForm() {
         className='w-full bg-primary-800 hover:bg-primary-900 text-white'
         disabled={isSubmitting}
       >
-        {isSubmitting ? <MiniLoader /> : 'Create Account'}
+        {isSubmitting ? <MiniLoader /> : 'Sign In'}
       </Button>
     </form>
   );
