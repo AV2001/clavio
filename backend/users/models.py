@@ -68,20 +68,3 @@ class User(AbstractBaseUser):
         old_password = User.objects.get(pk=self.pk).password
 
         return self.password != old_password
-
-
-class TeamInvite(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    email = models.EmailField()
-    organization = models.ForeignKey(
-        Organization, on_delete=models.CASCADE, related_name="invites"
-    )
-    invited_by = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="sent_invites"
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-    accepted_invite = models.BooleanField(default=False)
-
-    class Meta:
-        db_table = "team_invites"
-        unique_together = ["email", "organization"]
