@@ -27,9 +27,11 @@ export default function LoginForm() {
 
       if (result.success) {
         router.push('/dashboard');
+      } else {
+        toast.error(result.message);
       }
     } catch (error) {
-      toast.error(error.message || 'Failed to login. Please try again.');
+      toast.error(error.message);
     }
   };
 

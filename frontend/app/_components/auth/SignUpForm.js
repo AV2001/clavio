@@ -40,7 +40,7 @@ export default function SignUpForm() {
         toast.success(result.message);
         router.push('/login');
       } else {
-        toast.error(result.error);
+        toast.error(result.message);
       }
     } catch (error) {
       toast.error(error.message);
