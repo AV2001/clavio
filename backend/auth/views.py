@@ -26,13 +26,16 @@ def get_tokens_for_user(user):
 class LoginView(APIView):
     permission_classes = [AllowAny]
 
-    def post(self, request, format=None):
+    def post(self, request):
         email = request.data.get("email")
         password = request.data.get("password")
 
         if not email or not password:
             return Response(
-                {"error": "Please provide both email and password"},
+                {
+                    "success": False,
+                    "message": "Please provide both email and password.",
+                },
                 status=400,
             )
 
@@ -40,7 +43,10 @@ class LoginView(APIView):
 
         if user is None:
             return Response(
-                {"error": "Invalid email or password"},
+                {
+                    "success": False,
+                    "message": "Invalid email or password.",
+                },
                 status=401,
             )
 
@@ -72,16 +78,19 @@ class LoginView(APIView):
 
         return Response(
             {
+                "success": True,
                 "message": "Login successful!",
-                "tokens": {
-                    **tokens,
-                    "csrf": csrf_token,
+                "data": {
+                    "tokens": {
+                        **tokens,
+                        "csrf": csrf_token,
+                    },
+                    "user": user.id,
+                    "fullName": user.full_name,
+                    "email": user.email,
+                    "isAdmin": user.is_admin,
+                    "subscription": subscription_data,
                 },
-                "user": user.id,
-                "fullName": user.full_name,
-                "email": user.email,
-                "isAdmin": user.is_admin,
-                "subscription": subscription_data,
             }
         )
 
