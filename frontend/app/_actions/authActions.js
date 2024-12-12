@@ -1,23 +1,27 @@
 'use server';
 
-import { signIn } from '@/auth';
-import { createUser } from '@/app/api/userApi';
+import { signIn, globalAuthorizeError } from '@/auth';
+import axiosInstance from '@/app/api/axiosInstance';
 
 export async function signUpAction(formData) {
   try {
-    const result = await createUser({
+    const response = await axiosInstance.post('/users/', {
       fullName: formData.get('fullName'),
       email: formData.get('email'),
       password: formData.get('password'),
+      isInvite: formData.get('isInvite'),
+      organizationName: formData.get('organizationName'),
+      inviteToken: formData.get('inviteToken'),
     });
-    return {
-      success: result.success,
-      message: result.message,
-    };
+
+    const { success, message } = response.data;
+    return { success, message };
   } catch (error) {
     return {
-      success: false,
-      error: error.message,
+      success: error.response?.data?.success,
+      message:
+        error.response?.data?.message ||
+        "There's an error creating your account. Please try again later.",
     };
   }
 }
@@ -31,8 +35,16 @@ export async function loginAction(formData) {
     });
     return { success: true };
   } catch (error) {
-    console.error('Login error:', error);
-    throw new Error(error.message);
+    // Access the error from global variable
+    const success = globalAuthorizeError?.response?.data?.success;
+    const message =
+      globalAuthorizeError?.response?.data?.message ||
+      "There's an error logging you in. Please try again later.";
+
+    return {
+      success,
+      message,
+    };
   }
 }
 
