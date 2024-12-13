@@ -3,10 +3,8 @@
 import { useState } from 'react';
 import LivePreview from './LivePreview';
 import CreateChatbotForm from './CreateChatbotForm';
-import OrganizationModal from '@/app/_components/OrganizationModal';
 
 export default function ChatbotCreator() {
-  const [showOrgModal, setShowOrgModal] = useState(false);
   const [previewData, setPreviewData] = useState({
     chatbotName: '',
     initialMessage: '',
@@ -32,11 +30,6 @@ export default function ChatbotCreator() {
           </div>
         )}
       </div>
-
-      <OrganizationModal
-        isOpen={showOrgModal}
-        onClose={() => setShowOrgModal(false)}
-      />
     </>
   );
 }
