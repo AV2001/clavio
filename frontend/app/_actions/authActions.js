@@ -1,6 +1,6 @@
 'use server';
 
-import { signIn, globalAuthorizeError } from '@/auth';
+import { signIn, signOut, globalAuthorizeError } from '@/auth';
 import axiosInstance from '@/app/api/axiosInstance';
 
 export async function signUpAction(formData) {
