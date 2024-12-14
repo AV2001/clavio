@@ -36,6 +36,7 @@ class User(AbstractBaseUser):
     email = models.EmailField(unique=True)
     password = models.CharField(max_length=255, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    needs_onboarding = models.BooleanField(default=True)
     is_admin = models.BooleanField(default=False)
     organization = models.ForeignKey(
         Organization,
