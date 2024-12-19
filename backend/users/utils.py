@@ -6,10 +6,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def send_invite_email(from_email, to_email, organization_name, invite_token):
+def send_invite_email(from_email, to_email, organization_name):
     try:
         resend.api_key = RESEND_API_KEY
-        signup_url = f"{FRONTEND_URL}/signup?type=invite&token={invite_token}"
+        signup_url = f"{FRONTEND_URL}/signup?type=invite"
 
         params: resend.Emails.SendParams = {
             "from": from_email,
