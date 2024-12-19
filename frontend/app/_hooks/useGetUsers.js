@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { getUsers } from '@/app/api/userApi';
+import { getUsers } from '@/app/_actions/userActions';
 
 export function useGetUsers() {
   const {
@@ -10,9 +10,12 @@ export function useGetUsers() {
     error,
   } = useQuery({
     queryKey: ['users'],
-    queryFn: getUsers,
-    staleTime: 1000 * 60 * 5,
-    select: (data) => data.users,
+    queryFn: async () => await getUsers(),
+    retry: 2,
+    staleTime: 0,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   return { users, isLoadingUsers, error };

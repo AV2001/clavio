@@ -37,6 +37,8 @@ class User(AbstractBaseUser):
     password = models.CharField(max_length=255, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     is_admin = models.BooleanField(default=False)
+    accepted_invite = models.BooleanField(default=False)
+    invite_token = models.UUIDField(null=True, blank=True)
     organization = models.ForeignKey(
         Organization,
         on_delete=models.CASCADE,
@@ -54,7 +56,7 @@ class User(AbstractBaseUser):
         db_table = "organization_employees"
 
     def save(self, *args, **kwargs):
-        if self._state.adding or self._password_has_changed():
+        if self.password and (self._state.adding or self._password_has_changed()):
             self.password = make_password(self.password)
         super().save(*args, **kwargs)
 
