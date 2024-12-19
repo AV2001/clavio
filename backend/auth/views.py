@@ -8,6 +8,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.views import TokenRefreshView
 from rest_framework_simplejwt.exceptions import TokenError
 import logging
+from subscriptions.models import OrganizationSubscription
 
 
 User = get_user_model()
@@ -46,6 +47,29 @@ class LoginView(APIView):
         tokens = get_tokens_for_user(user)
         csrf_token = csrf.get_token(request)
 
+        # Get subscription info
+        org_subscription = OrganizationSubscription.objects.filter(
+            organization=user.organization
+        ).first()
+
+        subscription_data = None
+        if org_subscription and org_subscription.subscription:
+            subscription_plan = org_subscription.subscription
+            subscription_data = {
+                "status": org_subscription.subscription_status,
+                "current_period_end": org_subscription.subscription_end_date,
+                "plan": {
+                    "id": subscription_plan.id,
+                    "name": subscription_plan.name,
+                    "max_chatbots": subscription_plan.max_chatbots,
+                    "max_pdfs": subscription_plan.max_pdfs,
+                    "max_pages_per_pdfs": subscription_plan.max_pages_per_pdfs,
+                    "max_url_links": subscription_plan.max_url_links,
+                    "max_prompts_per_day": subscription_plan.max_prompts_per_day,
+                    "max_retrains_per_month": subscription_plan.max_retrains_per_month,
+                },
+            }
+
         return Response(
             {
                 "message": "Login successful!",
@@ -57,6 +81,7 @@ class LoginView(APIView):
                 "fullName": user.full_name,
                 "email": user.email,
                 "isAdmin": user.is_admin,
+                "subscription": subscription_data,
             }
         )
 
