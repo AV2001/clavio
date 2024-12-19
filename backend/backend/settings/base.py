@@ -28,8 +28,14 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 # Firecrawl API Key
 FIRECRAWL_API_KEY = os.getenv("FIRECRAWL_API_KEY")
 
+# Frontend URL
+FRONTEND_URL = os.getenv("FRONTEND_URL")
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("SECRET_KEY")
+
+# Resend API Key
+RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 
 
 # Application definition
@@ -41,12 +47,14 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "channels",
+    "django_eventstream",
     "corsheaders",
     "rest_framework",
     "rest_framework_simplejwt.token_blacklist",
     "organizations",
     "chatbots",
     "users",
+    "subscriptions",
 ]
 
 MIDDLEWARE = [
@@ -131,6 +139,9 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
 }
 
 
@@ -143,8 +154,8 @@ AUTHENTICATION_BACKENDS = [
 
 # Simple JWT Settings
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=20),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=14),
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
     "UPDATE_LAST_LOGIN": False,
