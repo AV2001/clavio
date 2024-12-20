@@ -1,6 +1,5 @@
 import json
 import logging
-import tiktoken
 import urllib.parse
 from backend.settings.base import ZILLIZ_URI, ZILLIZ_TOKEN
 from channels.db import database_sync_to_async
@@ -11,13 +10,13 @@ from llama_index.core import (
     StorageContext,
 )
 from django.apps import apps
-from llama_index.core.llms import ChatMessage
-from llama_index.core.memory import ChatSummaryMemoryBuffer
 from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.llms.openai import OpenAI
 from llama_index.vector_stores.milvus import MilvusVectorStore
 from llama_index.core.tools import QueryEngineTool, ToolMetadata
 from llama_index.core.agent import ReActAgent
+import asyncio
+
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +24,7 @@ Settings.llm = OpenAI(model="gpt-4o-mini")
 Settings.embed_model = OpenAIEmbedding(model="text-embedding-3-large")
 
 
-class ChatConsumer(AsyncWebsocketConsumer):
+class ExternalChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.embed_id = self.scope["url_route"]["kwargs"]["embed_id"]
         await self.accept()
@@ -207,7 +206,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             # Use ReAct Agent for response generation
             response = self.agent.chat(query)
 
-            print("👇👇👇👇👇")
+            print("👇👇👇����👇")
             print(type(response))
 
             # Extract the response text from the AgentChatResponse object
@@ -217,6 +216,139 @@ class ChatConsumer(AsyncWebsocketConsumer):
         except Exception as e:
             logger.error(f"An error occurred while processing the question: {str(e)}")
             return "I'm sorry, I'm having trouble processing your question. Please try again later."
+
+
+class InternalChatConsumer:
+    def __init__(self, chatbot_id, email, websocket=None):
+        self.chatbot_id = chatbot_id
+        self.email = email
+        self.total_tokens = 0
+        print(
+            f"Initializing InternalChatConsumer for chatbot_id: {chatbot_id}, email: {email}"
+        )
+
+        # Initialize LLM
+        model = "gpt-4o-mini"
+        self.llm = OpenAI(model=model)
+
+        # Initialize other attributes
+        self.chatbot = None
+        self.chatbot_user = None
+        self.index = None
+        self.agent = None
+
+    @database_sync_to_async
+    def create_chatbot_user(self, email, chatbot):
+        ChatbotUser = apps.get_model("chatbots", "ChatbotUser")
+        return ChatbotUser.objects.create(email=email, chatbot=chatbot)
+
+    async def initialize(self):
+        print("Initializing chatbot and agent...")
+        # Fetch the chatbot details from the database
+        self.chatbot = await self.get_chatbot()
+        print(f"Chatbot details: {self.chatbot}")
+
+        # Fetch the organization name
+        organization_name = await self.get_organization_name()
+        print(f"Organization name: {organization_name}")
+
+        # Create ChatbotUser instance with correct parameters
+        self.chatbot_user = await self.create_chatbot_user(
+            email=self.email, chatbot=self.chatbot
+        )
+        print(f"ChatbotUser created: {self.chatbot_user}")
+
+        # Initialize vector store
+        vector_store = MilvusVectorStore(
+            uri=ZILLIZ_URI,
+            token=ZILLIZ_TOKEN,
+            collection_name=organization_name,
+            dim=3072,
+        )
+
+        storage_context = StorageContext.from_defaults(vector_store=vector_store)
+        self.index = VectorStoreIndex.from_vector_store(
+            vector_store, storage_context=storage_context
+        )
+
+        # Initialize tools and agent
+        query_engine = self.index.as_query_engine()
+        tools = [
+            QueryEngineTool(
+                query_engine=query_engine,
+                metadata=ToolMetadata(
+                    name="knowledge_retriever",
+                    description="Use for retrieving information from the knowledge base",
+                ),
+            ),
+        ]
+
+        context = """
+        "You are a dedicated AI assistant at {organization_name} focused on providing accurate, helpful responses within the scope of the provided context. "
+        "Your role is to answer questions related to this specific context, and you are unable to provide information beyond it. However, you may answer "
+        "basic questions about yourself, such as your purpose or capabilities, while maintaining a professional and respectful tone. Your responses should always be:"
+        "\n1. Accurate and based only on the provided context"
+        "\n2. Clear, concise, and to the point"
+        "\n3. Professional and respectful"
+        "\nIf asked about topics outside the context, kindly clarify that you're limited to answering within your focus area and can only offer information "
+        "related to this specific context."
+        """
+
+        self.agent = ReActAgent.from_tools(
+            tools=tools,
+            llm=self.llm,
+            verbose=True,
+            context=context.format(
+                name=self.chatbot.name,
+                organization_name=organization_name,
+                first_name="User",
+            ),
+        )
+        print("Agent initialized.")
+
+    @database_sync_to_async
+    def get_chatbot(self):
+        Chatbot = apps.get_model("chatbots", "Chatbot")
+        return Chatbot.objects.get(id=self.chatbot_id)
+
+    @database_sync_to_async
+    def get_organization_name(self):
+        return self.chatbot.organization.name
+
+    async def get_response(self, query):
+        try:
+            print(f"Getting response for query: {query}")
+            # Get the response object
+            response = self.agent.chat(query)
+
+            # Get the full response text
+            response_text = str(response.response)
+            current_response = ""
+
+            # Stream word by word
+            words = response_text.split()
+            for word in words:
+                current_response += word + " "
+                yield {
+                    "type": "stream",
+                    "chunk": word + " ",
+                    "full_response": current_response,
+                }
+                print(f"🔹 Chunk sent: {word}", flush=True)
+                await asyncio.sleep(0.1)  # Smaller delay for smoother streaming
+
+            # Yield final message
+            yield {
+                "type": "final",
+                "response": current_response.strip(),
+                "total_tokens": self.total_tokens,
+            }
+            print("✅ Stream completed")
+
+        except Exception as e:
+            logger.error(f"Streaming error: {str(e)}")
+            print("❌ Stream error occurred")
+            yield {"type": "error", "error": str(e)}
 
 
 class ChatbotStatusConsumer(AsyncWebsocketConsumer):

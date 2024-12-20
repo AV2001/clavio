@@ -5,18 +5,32 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
-from django.http import HttpResponse
+from django.http import HttpResponse, StreamingHttpResponse
 from .serializers import ChatbotListSerializer, ChatbotDetailSerializer
 from .models import Chatbot
 from .tasks import train_chatbot_task
 import base64
+from .consumers import InternalChatConsumer
+from asgiref.sync import async_to_sync
+import json
+import asyncio
+from rest_framework.renderers import BaseRenderer
 
 
 logger = logging.getLogger(__name__)
 
 
+class EventStreamRenderer(BaseRenderer):
+    media_type = "text/event-stream"
+    format = "text"
+
+    def render(self, data, accepted_media_type=None, renderer_context=None):
+        return data
+
+
 class ChatbotView(APIView):
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request):
         try:
@@ -152,7 +166,8 @@ class ChatbotEmbedScriptView(APIView):
 
 
 class ChatbotDetailView(APIView):
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request, chatbot_id):
         try:
@@ -178,3 +193,101 @@ class ChatbotDetailView(APIView):
             return Response(
                 {"error": "There was an error deleting the chatbot."}, status=500
             )
+
+
+class ChatbotSSEView(APIView):
+    permission_classes = [AllowAny]
+    renderer_classes = [EventStreamRenderer]
+    chat_consumers = {}  # Class-level dictionary to store consumer instances
+
+    async def get_or_create_consumer(self, chatbot_id, email, initialize=False):
+        consumer_key = f"{chatbot_id}_{email}"
+        if consumer_key not in self.chat_consumers:
+            if not initialize:
+                raise ValueError("Consumer not initialized. Please refresh the page.")
+            print(f"Creating new consumer for chatbot_id: {chatbot_id}")
+            consumer = InternalChatConsumer(chatbot_id, email)
+            await consumer.initialize()
+            self.chat_consumers[consumer_key] = consumer
+        else:
+            print(f"Using existing consumer for chatbot_id: {chatbot_id}")
+        return self.chat_consumers[consumer_key]
+
+    def get(self, request, chatbot_id):
+        """Handle SSE stream connection and initial consumer setup"""
+        print(f"\n=== SSE GET Request for chatbot {chatbot_id} ===")
+        email = (
+            request.user.email if request.user.is_authenticated else "admin@test.com"
+        )
+
+        # Initialize consumer on SSE connection
+        consumer = async_to_sync(self.get_or_create_consumer)(
+            chatbot_id, email, initialize=True
+        )
+
+        async def event_stream():
+            try:
+                # Send initial connection confirmation
+                yield f"data: {json.dumps({'type': 'connected'})}\n\n"
+                print("SSE Connection established")
+
+                while True:
+                    await asyncio.sleep(30)  # Keepalive ping every 30 seconds
+                    yield f"data: {json.dumps({'type': 'ping'})}\n\n"
+
+            except Exception as e:
+                print(f"Stream error: {str(e)}")
+
+        response = StreamingHttpResponse(
+            event_stream(), content_type="text/event-stream"
+        )
+        response["Cache-Control"] = "no-cache"
+        response["X-Accel-Buffering"] = "no"
+        return response
+
+    def post(self, request, chatbot_id):
+        """Handle chat messages using existing consumer"""
+        try:
+            query = request.data.get("query")
+            email = request.user.email if request.user.is_authenticated else "admin@test.com"
+
+            # Get existing consumer
+            consumer = async_to_sync(self.get_or_create_consumer)(
+                chatbot_id, email, initialize=False
+            )
+
+            def generate():
+                # Create a new event loop for async operations
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                
+                async def get_chunks():
+                    async for chunk_data in consumer.get_response(query):
+                        yield f"data: {json.dumps(chunk_data)}\n\n"
+                
+                try:
+                    # Run the async generator in the event loop
+                    for chunk in loop.run_until_complete(self._collect_chunks(get_chunks())):
+                        yield chunk
+                finally:
+                    loop.close()
+
+            return StreamingHttpResponse(
+                streaming_content=generate(),
+                content_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "X-Accel-Buffering": "no",
+                }
+            )
+
+        except Exception as e:
+            logger.error(f"Error in post: {str(e)}")
+            return Response({"error": str(e)}, status=500)
+
+    async def _collect_chunks(self, generator):
+        """Helper method to collect chunks from an async generator"""
+        chunks = []
+        async for chunk in generator:
+            chunks.append(chunk)
+        return chunks
