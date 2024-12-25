@@ -13,16 +13,17 @@ export function useDeleteTeamMember() {
         'Are you sure you want to remove this team member? This action cannot be undone.'
       );
 
-      if (!confirmed) {
-        throw new Error('Operation cancelled');
+      if (confirmed) {
+        return await deleteTeamMemberAction(userId);
       }
 
-      return await deleteTeamMemberAction(userId);
+      return null;
     },
     onSuccess: (data) => {
-      toast.success(data.message);
-      // Invalidate and refetch users list
-      queryClient.invalidateQueries({ queryKey: ['users'] });
+      if (data) {
+        toast.success(data.message);
+        queryClient.invalidateQueries({ queryKey: ['users'] });
+      }
     },
     onError: (error) => {
       toast.error(error.message);
